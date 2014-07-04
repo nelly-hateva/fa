@@ -1,0 +1,6 @@
+dict/*
+bin/*
+obj/*
+*.cbp
+*.depend
+*.layout
