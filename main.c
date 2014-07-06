@@ -2,14 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pair.h"
+#include "hash.h"
+
+
 #define MAXIMUM_LINE_SIZE 100
 #define DICTIONARY_SIZE 133334
+
 // wc -L filename gives the length of the longest line in a file
 
-typedef struct {
-    char* first;
-    char* second;
-} pair;
 
 int main( int argc, char* argv[] ) {
     if ( argc != 2 )
@@ -40,11 +41,12 @@ int main( int argc, char* argv[] ) {
         dict[i] = entry;
         i++;
     }
-    int j = 0;
+    fclose ( file );
+
+    int j;
     for ( j = 0; j < i; j++)
     {
        // todo
     }
-    fclose ( file );
     return 0;
 }
