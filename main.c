@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pair.h"
-#include "hash.h"
-
+#include "automaton.h"
 
 #define MAXIMUM_LINE_SIZE 100
 #define DICTIONARY_SIZE 133334
@@ -29,24 +27,22 @@ int main( int argc, char* argv[] ) {
     pair dict[DICTIONARY_SIZE];
 
     const char s[2] = " ";
-    int i = 0;
+    int dictionary_size = 0;
     char* token; char* first; char* second;
     while ( fgets ( line, sizeof line, file ) != NULL )
     {
+        line[strlen(line) - 1] = '\0';
         token = strtok(line, s);
         first = token;
         token = strtok(NULL, s);
         second = token;
         pair entry = {.first = strdup(first), .second = strdup(second)};
-        dict[i] = entry;
-        i++;
+        dict[dictionary_size] = entry;
+        dictionary_size++;
     }
     fclose ( file );
 
-    int j;
-    for ( j = 0; j < i; j++)
-    {
-       // todo
-    }
+    build_subseq_trans(dict, dictionary_size);
+
     return 0;
 }
