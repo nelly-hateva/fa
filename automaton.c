@@ -20,8 +20,8 @@ char* final;
 int* from;
 int* to;
 char* label;
-char* psi;
-char* lambda;
+char** psi;
+char** lambda;
 int start;
 
 int number_of_states;
@@ -30,7 +30,8 @@ int memory_for_states;
 int memory_for_transitions;
 
 int h(int);
-void delete_transition(int n);
+void delete_transition(int);
+char equal(int, int);
 
 
 void initialize()
@@ -45,8 +46,8 @@ void initialize()
     from = (int*) malloc(memory_for_transitions * sizeof(int));
     to = (int*) malloc(memory_for_transitions * sizeof(int));
     label = (char*) malloc(memory_for_transitions * sizeof(char));
-    psi = (char*) malloc(memory_for_transitions * sizeof(char));
-    lambda = (char*) malloc(memory_for_transitions * sizeof(char));
+    psi = (char**) malloc(memory_for_transitions * sizeof(char*));
+    lambda = (char**) malloc(memory_for_transitions * sizeof(char*));
 
     garbage_states = (int*) malloc(GARBAGE_SIZE * sizeof(int));
     garbage_transitions = (int*) malloc(GARBAGE_SIZE * sizeof(int));
@@ -102,8 +103,8 @@ void reallocate_memory()
         from = (int*) realloc(from, memory_for_transitions * sizeof(int));
         to = (int*) realloc(to, memory_for_transitions * sizeof(int));
         label = (char*) realloc(label, memory_for_transitions * sizeof(char));
-        psi = (char*) realloc(psi, memory_for_transitions * sizeof(char));
-        lambda = (char*) realloc(lambda, memory_for_transitions * sizeof(char));
+        psi = (char**) realloc(psi, memory_for_transitions * sizeof(char*));
+        lambda = (char**) realloc(lambda, memory_for_transitions * sizeof(char*));
 
         int i;
         for(i = temp; i < memory_for_transitions; i++)
@@ -282,6 +283,12 @@ int* path(char* alpha, int* tau_len)
 }
 
 
+int find_equivalent(int state)
+{
+    return search(state, h(state));
+}
+
+
 void reduce(char* alpha, int* tau, int tau_len, int l)
 {
     int i; int p;
@@ -289,7 +296,8 @@ void reduce(char* alpha, int* tau, int tau_len, int l)
     {
         p = tau_len - i - 1;
         int tp = tau[p];
-        if(search(tp ,h(tp)) == 1)
+        int state = find_equivalent(tp);
+        if(state != -1)
         {
             delete_state(tp);
             delete_transition_by_signature(tau[p-1], alpha[p-1]);
@@ -313,6 +321,26 @@ int h(int n)
         first  = next_transition[first];
     }
     return (hash_code + final[n]) % hash_length;
+}
+
+
+char equal(int n, int m)
+{
+    char flag = 0;
+    if(final[n] == final[m])
+        flag = 1;
+    if(flag)
+    {
+        int transition_n = first_transition[n], transition_m = first_transition[m];
+        while(label[transition_n] == label[transition_m] && next_transition[transition_n] != -1 && next_transition[transition_m] != -1)
+        {
+            transition_n = next_transition[transition_n];
+            transition_m = next_transition[transition_m];
+        }
+        if(next_transition[transition_m] != next_transition[transition_n] || label[transition_n] != label[transition_m])
+            return 0;
+    }
+    return flag;
 }
 
 
