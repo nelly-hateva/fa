@@ -4,6 +4,7 @@
 #define INITIAL_HASH_CAPACITY 2048
 
 extern int h(int);
+extern char equal(int n, int m);
 
 int* table;
 int* next;
@@ -99,14 +100,14 @@ void insert(int value, int key)
 }
 
 
-char search(int value, int key)
+int* search(int value, int key)
 {
     int j = table[key];
     while(j!= -1)
     {
-        if(j == value)
-            return 1;
+        if(j != value && equal(value, j))
+            return j;
         j = next[j];
     }
-    return 0;
+    return -1;
 }
