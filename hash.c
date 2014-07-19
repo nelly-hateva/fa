@@ -100,7 +100,7 @@ void insert(int value, int key)
 }
 
 
-int* search(int value, int key)
+int search(int value, int key)
 {
     int j = table[key];
     while(j!= -1)
