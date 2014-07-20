@@ -2,9 +2,10 @@
 #define __PAIR_H__
 
 
-typedef struct {
+typedef struct
+{
     char* first;
     char* second;
 } pair;
 
-#endif
+#endif // PAIR_H_INCLUDED

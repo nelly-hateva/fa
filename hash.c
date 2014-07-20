@@ -36,7 +36,9 @@ void resize_hash()
 {
     int* temp = (int*) malloc(hash_size * sizeof(int));
 
-    int i; int j = 0; int element;
+    int i;
+    int j = 0;
+    int element;
     for( i = 0 ; i < hash_length; i++ )
     {
         element = table[i];
@@ -90,7 +92,7 @@ void delete(int value, int key)
 
 void insert(int value, int key)
 {
-    if(hash_size / capacity > 9 / 10)
+    if(hash_size / capacity > 0.9)
     {
         resize_hash();
     }
@@ -103,6 +105,7 @@ void insert(int value, int key)
 int search(int value, int key)
 {
     int j = table[key];
+
     while(j!= -1)
     {
         if(j != value && equal(value, j))

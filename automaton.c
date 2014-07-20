@@ -36,8 +36,10 @@ char equal(int, int);
 
 void initialize()
 {
-    number_of_states = 0; number_of_transitions = 0;
-    memory_for_states = INITIAL_STATES_NUMBER; memory_for_transitions = INITIAL_TRANSITIONS_NUMBER;
+    number_of_states = 0;
+    number_of_transitions = 0;
+    memory_for_states = INITIAL_STATES_NUMBER;
+    memory_for_transitions = INITIAL_TRANSITIONS_NUMBER;
 
     first_transition = (int*) malloc(memory_for_states * sizeof(int));
     final = (char*) malloc(memory_for_states * sizeof(char));
@@ -134,18 +136,13 @@ int get_free_state_number()
 void add_state(int n)
 {
     reallocate_memory();
-    if(final[n] == -1)
-    {
-        final[n] = 0;
-        number_of_states++;
-    }
+    final[n] = 0;
+    number_of_states++;
 }
 
 
 void add_transition(int from_state, char label_transition, int to_state)
 {
-    add_state(from_state);
-    add_state(to_state);
     int position;
     if(garbage_transition == -1)
         position = number_of_transitions;
@@ -250,36 +247,43 @@ void delete_transition_by_signature(int from_state, char label_transition)
             delete_transition(transition);
             break;
         }
+        transition = next_transition[transition];
     }
 }
 
 
-int* path(char* alpha, int* tau_len)
+int delta(int state, char letter)
 {
-    int alpha_len = strlen(alpha);
-    int* result = malloc(alpha_len * sizeof(int));
-    int result_len = 0;
-    int letter; int transition; int state = start;
+    int transition = first_transition[state];
+    while(transition != -1)
+    {
+        if(label[transition] == letter)
+            return to[transition];
+        transition = next_transition[transition];
+    }
+    return -1;
+}
 
-    int i;
+
+int* path(char* alpha, int* tau, int* tau_len)
+{
+    int alpha_len = strlen(alpha), state = start, i;
+    *tau_len = 0;
+
+    tau[*tau_len] = state;
+    (*tau_len)++;
     for(i = 0; i < alpha_len; i++)
     {
-        letter = alpha[i];
-        transition = first_transition[state];
-        while( label[transition] != -1 && transition != -1)
+        state = delta(state, alpha[i]);
+        if(state != -1)
         {
-            if ( label[transition] == letter )
-            {
-                result[result_len] = transition;
-                result_len++;
-                state = to[transition];
-                break;
-            }
-            transition = next_transition[transition];
+            tau[*tau_len] = state;
+            (*tau_len)++;
         }
+        else
+            return tau;
     }
-    *tau_len = result_len;
-    return result;
+    return tau;
 }
 
 
@@ -291,7 +295,8 @@ int find_equivalent(int state)
 
 void reduce(char* alpha, int* tau, int tau_len, int l)
 {
-    int i; int p;
+    int i;
+    int p;
     for(i = 1; tau_len - i == l; i++ )
     {
         p = tau_len - i - 1;
@@ -313,7 +318,11 @@ int h(int n)
     int hash_code;
     int first = first_transition[n];
     if (first == -1) hash_code = 1;
-    else { hash_code = ((label[first] * 257) % hash_length) + to[first]; first = next_transition[first]; }
+    else
+    {
+        hash_code = ((label[first] * 257) % hash_length) + to[first];
+        first = next_transition[first];
+    }
     while(first != -1)
     {
         hash_code = ((hash_code * 257) % hash_length) + label[first];

@@ -10,25 +10,28 @@
 // wc -L filename gives the length of the longest line in a file
 
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char* argv[] )
+{
     if ( argc != 2 )
     {
         printf("Wrong usage. Please specify a file name.\n");
         exit(0);
     }
+
     FILE *file;
-    file = fopen(argv[1],"r");
-    if( file == NULL )
+    if( (file = fopen(argv[1],"r")) == NULL )
     {
         printf("Error while opening the file.\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
     char line [MAXIMUM_LINE_SIZE];
     pair dict[DICTIONARY_SIZE];
 
     const char s[2] = " ";
     int dictionary_size = 0;
-    char* token; char* first; char* second;
+    char* token;
+    char* first;
+    char* second;
     while ( fgets ( line, sizeof line, file ) != NULL )
     {
         line[strlen(line) - 1] = '\0';
