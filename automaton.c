@@ -80,6 +80,20 @@ void initialize()
 }
 
 
+void finalize()
+{
+    free(first_transition);
+    free(final);
+    free(next_transition);
+    free(from);
+    free(to);
+    free(label);
+    free(psi);
+    free(lambda);
+    free(garbage_states);
+    free(garbage_transitions);
+}
+
 void reallocate_memory()
 {
     if(number_of_states >= memory_for_states)
@@ -143,6 +157,8 @@ void add_state(int n)
 
 void add_transition(int from_state, char label_transition, int to_state)
 {
+    if(find(from_state, h(from_state)) != -1)
+        delete(from_state,h(from_state)); // ???
     int position;
     if(garbage_transition == -1)
         position = number_of_transitions;
@@ -295,8 +311,7 @@ int find_equivalent(int state)
 
 void reduce(char* alpha, int* tau, int tau_len, int l)
 {
-    int i;
-    int p;
+    int i, p;
     for(i = 1; tau_len - i == l; i++ )
     {
         p = tau_len - i - 1;
@@ -355,9 +370,9 @@ char equal(int n, int m)
 
 void delete_word(char* alpha)
 {
-    int tau_len;
-    int* tau = path(alpha, &tau_len);
-    int i;
+    int* tau;
+    int tau_len, i;
+    path(alpha, tau, &tau_len);
     for(i = tau_len - 1; i >= 0; i--)
         if(next_transition[first_transition[tau[i]]] != -1)
             delete_state(tau[i]);
@@ -366,57 +381,57 @@ void delete_word(char* alpha)
 
 void build_subseq_trans(pair* dict, int dictionary_size)
 {
-    initialize(); initialize_hash();
-    int j, t;
+    initialize();
+    initialize_hash();
 
-    for ( j = 0; j < dictionary_size; j++)
+    int i, j, t, tau_len;
+    char *alpha, *beta, *alpha_prim, *beta_prim;
+    char alpha_len;
+
+    // assume no word is longer than 50
+    int* tau = malloc(51 * sizeof(int));
+    int* p = malloc(51 * sizeof(int));
+    int* tau_prim = malloc(51 * sizeof(int));
+
+    alpha = dict[0].first;
+    beta = dict[0].second;
+    for(t = 0; t <= strlen(alpha); t++)
+        add_state(t);
+    start = 0;
+    final[strlen(alpha) + 1] = 1;
+    for(t = 0; t < strlen(alpha); t++)
+        add_transition(t, alpha[t], t + 1);
+
+    for ( j = 1; j < dictionary_size; j++)
     {
-        if(j == 0)
+        alpha = dict[j].first;
+        beta = dict[j].second;
+        alpha_prim = dict[j - 1].first;
+        beta_prim = dict[j - 1].second;
+        alpha_len = strlen(alpha);
+        tau = path(alpha, tau, &tau_len);
+        reduce(alpha_prim, tau, tau_len, strlen(alpha_prim));
+
+        // P = < |Q| + 1, ... , |Q| + |apha| - |tau| + 1 >
+        for(i = 0; i <= alpha_len - tau_len ; i++)
         {
-            char* alpha = dict[j].first;
-            //char* beta = dict[j].second;
-            start = 0;
-            //lambda[start] = beta;
-            for(t = 0; t < strlen(alpha); t++)
-            {
-                //lambda[t] = '\0';
-                add_state(t);
-            }
-            final[strlen(alpha)] = 1;
-            psi[strlen(alpha)] = '\0';
+            p[i] = get_free_state_number();
+            add_state(p[i]);
         }
 
-        else
-        {
-            char* alpha = dict[j].first;
-            // char* beta = dict[j].second;
-            char* alpha_prim = dict[j - 1].first;
-            // char* beta_prim = dict[j - 1].second;
+        // tau' = tau . P
+        for(i = 0; i < tau_len; i++)
+            tau_prim[i] = tau[i];
+        for(i = tau_len; i <= alpha_len; i++)
+            tau_prim[i] = p[i - tau_len];
 
-            char alpha_len = strlen(alpha);
-            int tau_len;
-            int i;
-
-            int* tau = path(alpha, &tau_len);
-
-            reduce(alpha_prim, tau, tau_len, strlen(alpha_prim));
-
-            int* p = malloc((alpha_len - tau_len) * sizeof(int));
-            for(i = 0; i < alpha_len - tau_len ; i++)
-                p[i] = get_free_state_number();
-
-            int* tau_prim = malloc((alpha_len + 1) * sizeof(int));
-            for(i = 0; i < tau_len; i++)
-                tau_prim[i] = tau[i];
-            for(i = tau_len; i < alpha_len; i++)
-                tau_prim[i] = p[i - tau_len];
-
-            for(i = 0; i < alpha_len - tau_len; i++)
-                add_state(p[i]);
-            final[alpha_len - tau_len - 1] = 1;
-            //for(i = tau_len; i < alpha_len; i++)
-             //   add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
-            free(p); free(tau_prim);
-        }
+        final[p[alpha_len - tau_len]] = 1;
+        for(i = tau_len - 1; i < alpha_len; i++)
+            add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
     }
+
+    free(tau); free(tau_prim); free(p);
+    finalize_hash(); finalize();
+
+    printf("%d \n", number_of_states);
 }
