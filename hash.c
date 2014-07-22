@@ -18,9 +18,10 @@ void insert(int, int);
 
 void initialize_hash()
 {
-    hash_length = INITIAL_HASH_LENGTH;
     hash_size = 0;
+    hash_length = INITIAL_HASH_LENGTH;
     capacity = INITIAL_HASH_CAPACITY;
+
     table = (int*) malloc(hash_length * sizeof(int));
     next = (int*) malloc(capacity * sizeof(int));
 
@@ -32,23 +33,27 @@ void initialize_hash()
 }
 
 
+void finalize_hash()
+{
+    free(table);
+    free(next);
+}
+
+
 void resize_hash()
 {
-    int* temp = (int*) malloc(hash_size * sizeof(int));
+    int *temp = (int*) malloc(hash_size * sizeof(int));
+    int element, i, j = 0;
 
-    int i;
-    int j = 0;
-    int element;
     for( i = 0 ; i < hash_length; i++ )
     {
         element = table[i];
         while(element != -1)
         {
             temp[j] = element;
-            j++;
+            ++j;
             element = next[element];
         }
-
     }
 
     capacity *= 2;
@@ -62,7 +67,7 @@ void resize_hash()
         next[i] = -1;
 
     int temp_hash_size = hash_size;
-    hash_size = 0 ;
+    hash_size = 0;
     for( i = 0; i < temp_hash_size; i++ )
         insert(temp[i], h(temp[i]));
     free(temp);
@@ -92,20 +97,34 @@ void delete(int value, int key)
 
 void insert(int value, int key)
 {
-    if(hash_size / capacity > 0.9)
-    {
+    if( value >= capacity )
         resize_hash();
+
+    if( find(value, key) == -1 )
+    {
+        next[value] = table[key];
+        table[key] = value;
+        hash_size++;
     }
-    next[value] = table[key];
-    table[key] = value;
-    hash_size++;
+}
+
+
+int find(int value, int key)
+{
+    int j = table[key];
+    while(j != -1)
+    {
+        if(j  ==  value)
+            return 1;
+        j = next[j];
+    }
+    return -1;
 }
 
 
 int search(int value, int key)
 {
     int j = table[key];
-
     while(j!= -1)
     {
         if(j != value && equal(value, j))
