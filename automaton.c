@@ -45,7 +45,7 @@ void delete_transition(int);
 char equal(int, int);
 
 
-void initialize()
+void allocate_memory()
 {
     number_of_states = 0;
     number_of_transitions = 0;
@@ -95,7 +95,7 @@ void initialize()
 }
 
 
-void finalize()
+void free_memory()
 {
     free(first_transition);
     free(final);
@@ -427,7 +427,7 @@ char equal(int n, int m)
 
 void build_subseq_trans(char* filename)
 {
-    initialize(); initialize_hash();
+    allocate_memory(); initialize_hash();
     read_dictionary(filename);
 
     int i, j, t, tau_len, c;
@@ -475,8 +475,7 @@ void build_subseq_trans(char* filename)
             add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
     }
 
-    free(tau); free(tau_prim); free(p);
-    finalize_hash(); finalize();
+    finalize_hash(); free_memory();
 
     printf("%d \n", number_of_states);
 }
