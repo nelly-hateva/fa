@@ -110,7 +110,7 @@ void finalize()
     free(dictionary);
 }
 
-void reallocate_memory()
+void reallocate_memory_for_states()
 {
     if(number_of_states >= memory_for_states)
     {
@@ -127,7 +127,12 @@ void reallocate_memory()
             final[i] = -1;
         }
     }
-    else if (number_of_transitions >= memory_for_transitions)
+}
+
+
+void reallocate_memory_for_transitions()
+{
+    if (number_of_transitions >= memory_for_transitions)
     {
         int temp = memory_for_transitions;
         memory_for_transitions *= 2;
@@ -147,7 +152,12 @@ void reallocate_memory()
             label[i] = -1;
         }
     }
-    else if(dictionary_size >= memory_for_dictionary)
+}
+
+
+void reallocate_memory_for_dictionary()
+{
+    if(dictionary_size >= memory_for_dictionary)
     {
         memory_for_dictionary *= 2;
         dictionary = (pair*) realloc(dictionary, memory_for_dictionary * sizeof(pair));
@@ -168,7 +178,7 @@ void read_dictionary(char* filename)
 
     while ( fgets ( line, sizeof line, file ) != NULL )
     {
-        reallocate_memory();
+        reallocate_memory_for_dictionary();
         line[strlen(line) - 1] = '\0';
         token = strtok(line, s);
         first = token;
@@ -196,7 +206,7 @@ int get_free_state_number()
 
 void add_state(int n)
 {
-    reallocate_memory();
+    reallocate_memory_for_states();
     final[n] = 0;
     number_of_states++;
 }
@@ -215,7 +225,7 @@ void add_transition(int from_state, char label_transition, int to_state)
         garbage_transition--;
     }
 
-    reallocate_memory();
+    reallocate_memory_for_transitions();
     from[position] = from_state;
     to[position] = to_state;
     label[position] = label_transition;
