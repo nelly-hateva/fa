@@ -3,6 +3,6 @@
 
 #include "pair.h"
 
-void build_subseq_trans(pair* dict, int dictionary_size);
+void build_subseq_trans(char* filename);
 
 #endif // AUTOMATON_H_INCLUDED

@@ -1,12 +1,23 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "pair.h"
 #include "hash.h"
 
+#define INITIAL_DICTIONARY_SIZE 10000
 #define INITIAL_STATES_NUMBER 2048
 #define INITIAL_TRANSITIONS_NUMBER 2048
 #define GARBAGE_SIZE 1000
+#define MAX_WORD_SIZE 51
+#define MAXIMUM_LINE_SIZE 100
+// wc -L filename gives the length of the longest line in a file
+
+extern int find(int, int);
+
+pair* dictionary;
+int memory_for_dictionary;
+int dictionary_size;
 
 int* garbage_states;
 int* garbage_transitions;
@@ -38,8 +49,10 @@ void initialize()
 {
     number_of_states = 0;
     number_of_transitions = 0;
+    dictionary_size = 0;
     memory_for_states = INITIAL_STATES_NUMBER;
     memory_for_transitions = INITIAL_TRANSITIONS_NUMBER;
+    memory_for_dictionary = INITIAL_DICTIONARY_SIZE;
 
     first_transition = (int*) malloc(memory_for_states * sizeof(int));
     final = (char*) malloc(memory_for_states * sizeof(char));
@@ -55,6 +68,8 @@ void initialize()
     garbage_transitions = (int*) malloc(GARBAGE_SIZE * sizeof(int));
     garbage_state = -1;
     garbage_transition = -1;
+
+    dictionary = (pair*) malloc(memory_for_dictionary * sizeof(pair));
 
     int i;
     for(i = 0; i < memory_for_states; i++)
@@ -92,6 +107,7 @@ void finalize()
     free(lambda);
     free(garbage_states);
     free(garbage_transitions);
+    free(dictionary);
 }
 
 void reallocate_memory()
@@ -131,8 +147,39 @@ void reallocate_memory()
             label[i] = -1;
         }
     }
+    else if(dictionary_size >= memory_for_dictionary)
+    {
+        memory_for_dictionary *= 2;
+        dictionary = (pair*) realloc(dictionary, memory_for_dictionary * sizeof(pair));
+    }
 }
 
+
+void read_dictionary(char* filename)
+{
+    FILE *file;
+    if( (file = fopen(filename,"r")) == NULL )
+    {
+        printf("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+    char line[MAXIMUM_LINE_SIZE]; const char s[2] = " ";
+    char* token; char* first; char* second;
+
+    while ( fgets ( line, sizeof line, file ) != NULL )
+    {
+        reallocate_memory();
+        line[strlen(line) - 1] = '\0';
+        token = strtok(line, s);
+        first = token;
+        token = strtok(NULL, s);
+        second = token;
+        pair entry = {.first = strdup(first), .second = strdup(second)};
+        dictionary[dictionary_size] = entry;
+        dictionary_size++;
+    }
+    fclose ( file );
+}
 
 int get_free_state_number()
 {
@@ -368,34 +415,23 @@ char equal(int n, int m)
 }
 
 
-void delete_word(char* alpha)
+void build_subseq_trans(char* filename)
 {
-    int* tau;
-    int tau_len, i;
-    path(alpha, tau, &tau_len);
-    for(i = tau_len - 1; i >= 0; i--)
-        if(next_transition[first_transition[tau[i]]] != -1)
-            delete_state(tau[i]);
-}
+    initialize(); initialize_hash();
+    read_dictionary(filename);
 
+    int i, j, t, tau_len, c;
+    char *alpha, *beta, *alpha_prim;
+    char alpha_len; char dummy[2];
 
-void build_subseq_trans(pair* dict, int dictionary_size)
-{
-    initialize();
-    initialize_hash();
+    int tau[51]; int p[51]; int tau_prim[51];
+    char* output[51]; char* output_labels[51];
+    char substring[51]; char prefix[51]; char path_label[51];
 
-    int i, j, t, tau_len;
-    char *alpha, *beta, *alpha_prim, *beta_prim;
-    char alpha_len;
-
-    // assume no word is longer than 50
-    int* tau = malloc(51 * sizeof(int));
-    int* p = malloc(51 * sizeof(int));
-    int* tau_prim = malloc(51 * sizeof(int));
-
-    alpha = dict[0].first;
-    beta = dict[0].second;
-    for(t = 0; t <= strlen(alpha); t++)
+    alpha = dictionary[0].first;
+    beta = dictionary[0].second;
+    alpha_len = strlen(alpha);
+    for(t = 0; t <= alpha_len; t++)
         add_state(t);
     start = 0;
     final[strlen(alpha) + 1] = 1;
@@ -404,10 +440,9 @@ void build_subseq_trans(pair* dict, int dictionary_size)
 
     for ( j = 1; j < dictionary_size; j++)
     {
-        alpha = dict[j].first;
-        beta = dict[j].second;
-        alpha_prim = dict[j - 1].first;
-        beta_prim = dict[j - 1].second;
+        alpha = dictionary[j].first;
+        beta = dictionary[j].second;
+        alpha_prim = dictionary[j - 1].first;
         alpha_len = strlen(alpha);
         tau = path(alpha, tau, &tau_len);
         reduce(alpha_prim, tau, tau_len, strlen(alpha_prim));
