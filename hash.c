@@ -35,6 +35,7 @@ void initialize_hash()
 
 void finalize_hash()
 {
+    printf("%d \n", hash_size);
     free(table);
     free(next);
 }
@@ -95,6 +96,19 @@ void delete(int value, int key)
 }
 
 
+int find(int value, int key)
+{
+    int j = table[key];
+    while(j != -1)
+    {
+        if(j  ==  value)
+            return 1;
+        j = next[j];
+    }
+    return -1;
+}
+
+
 void insert(int value, int key)
 {
     if( value >= capacity )
@@ -109,26 +123,20 @@ void insert(int value, int key)
 }
 
 
-int find(int value, int key)
-{
-    int j = table[key];
-    while(j != -1)
-    {
-        if(j  ==  value)
-            return 1;
-        j = next[j];
-    }
-    return -1;
-}
-
-
 int search(int value, int key)
 {
     int j = table[key];
     while(j!= -1)
     {
         if(j != value && equal(value, j))
+        {
+            if(j < 0)
+            {
+                printf("%d ",  j);
+                exit(EXIT_FAILURE);
+            }
             return j;
+        }
         j = next[j];
     }
     return -1;
