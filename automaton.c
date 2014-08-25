@@ -114,14 +114,13 @@ void reallocate_memory_for_states()
 {
     if(number_of_states >= memory_for_states)
     {
-
-        int temp = memory_for_states;
+        int old_memory_for_states = memory_for_states;
         memory_for_states *= 2;
         first_transition = (int*) realloc(first_transition, memory_for_states * sizeof(int));
         final = (char*) realloc(final, memory_for_states * sizeof(char));
 
         int i;
-        for(i = temp; i < memory_for_states; i++)
+        for(i = old_memory_for_states; i < memory_for_states; i++)
         {
             first_transition[i] = -1;
             final[i] = -1;
@@ -134,7 +133,7 @@ void reallocate_memory_for_transitions()
 {
     if (number_of_transitions >= memory_for_transitions)
     {
-        int temp = memory_for_transitions;
+        int old_memory_for_transitions = memory_for_transitions;
         memory_for_transitions *= 2;
         next_transition = (int*) realloc(next_transition, memory_for_transitions * sizeof(int));
         from = (int*) realloc(from, memory_for_transitions * sizeof(int));
@@ -144,7 +143,7 @@ void reallocate_memory_for_transitions()
         lambda = (char**) realloc(lambda, memory_for_transitions * sizeof(char*));
 
         int i;
-        for(i = temp; i < memory_for_transitions; i++)
+        for(i = old_memory_for_transitions; i < memory_for_transitions; i++)
         {
             next_transition[i] = -1;
             from[i] = -1;
@@ -191,6 +190,7 @@ void read_dictionary(char* filename)
     fclose ( file );
 }
 
+
 int get_free_state_number()
 {
     if(garbage_state == -1)
@@ -210,7 +210,6 @@ void add_state(int n)
     final[n] = 0;
     number_of_states++;
 }
-
 
 void add_transition(int from_state, char label_transition, int to_state)
 {

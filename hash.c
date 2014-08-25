@@ -35,7 +35,7 @@ void initialize_hash()
 
 void finalize_hash()
 {
-    printf("%d \n", hash_size);
+    printf("HASH SIZE %d \n", hash_size);
     free(table);
     free(next);
 }
