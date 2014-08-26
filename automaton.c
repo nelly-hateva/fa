@@ -412,21 +412,23 @@ char* lambda_transition(int q1, char c, int q2)
 }
 
 
-void output_label(char* alpha, char* result)
+char* output_label(char* alpha)
 {
-    int alpha_len = strlen(alpha), state1 = start, state2, i; char* output;
-    result[0] = '\0';
+    int alpha_len = strlen(alpha);
+    int state1 = start, state2;
+    int i;
+    char result[MAX_WORD_SIZE] = {'\0'};
 
     for(i = 0; i < alpha_len; i++)
     {
         state2 = delta(state1, alpha[i]);
         if(state2 != -1)
         {
-            output = lambda_transition(state1, alpha[i], state2);
-            result = strcat(result, output);
+            strcat(result, lambda_transition(state1, alpha[i], state2));
             state1 = state2;
         }
     }
+    return result;
 }
 
 
@@ -603,7 +605,7 @@ void build_subseq_trans(char* filename)
             strncpy(substring, alpha, i + 1); // substring is alpha[0...i]
             substring[i+1] = 0;
 
-            output_label(substring, path_label);
+            path_label = output_label(substring);
             lcp(path_label, beta, prefix);
             output[i] = strdup(prefix); // Л(i)
             output_labels[i] = path_label;
