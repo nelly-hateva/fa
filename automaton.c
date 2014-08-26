@@ -9,7 +9,7 @@
 #define INITIAL_STATES_NUMBER 2048
 #define INITIAL_TRANSITIONS_NUMBER 2048
 #define GARBAGE_SIZE 1000
-#define MAX_WORD_SIZE 51
+#define MAX_WORD_SIZE 64
 #define MAXIMUM_LINE_SIZE 100
 // wc -L filename gives the length of the longest line in a file
 
