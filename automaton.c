@@ -84,6 +84,7 @@ void allocate_memory()
         from[i] = -1;
         to[i] = -1;
         label[i] = -1;
+        psi[i] = "";
     }
 
     for(i = 0; i < GARBAGE_SIZE; i++)
@@ -149,6 +150,7 @@ void reallocate_memory_for_transitions()
             from[i] = -1;
             to[i] = -1;
             label[i] = -1;
+            psi[i] = "";
         }
     }
 }
@@ -204,6 +206,29 @@ int get_free_state_number()
 }
 
 
+void lcp(char* alpha, char* beta, char* result) // longest common prefix
+{
+    int i = 0;
+    while(i < strlen(alpha) && i < strlen(beta) && alpha[i] == beta[i])
+        i++;
+    strncpy(result, alpha, i);
+    result[i] = 0;
+}
+
+
+char* strrem(char* alpha, char* beta)
+{
+    char result[strlen(beta)];
+    if(strlen(alpha) < strlen(beta))
+    {
+        memcpy(result, beta + strlen(alpha), strlen(beta) - strlen(alpha));
+    }
+    else
+        result[0] = '\0';
+    return strdup(result);
+}
+
+
 void add_state(int n)
 {
     reallocate_memory_for_states();
@@ -213,7 +238,7 @@ void add_state(int n)
 
 void add_transition(int from_state, char label_transition, int to_state)
 {
-    if(find(from_state, h(from_state)) != -1)
+    if(find(from_state, h(from_state)) != -1)//??
         delete(from_state,h(from_state)); // ???
     int position;
     if(garbage_transition == -1)
@@ -254,6 +279,19 @@ void add_transition(int from_state, char label_transition, int to_state)
 
 }
 
+void add_output(int state, char c, char* string)
+{
+    int transition = first_transition[state];
+    while(transition != -1)
+    {
+        if(label[transition] == c)
+        {
+            lambda[transition] = strdup(string);
+            return;
+        }
+        transition = next_transition[transition];
+    }
+}
 
 void delete_state(int n)
 {
@@ -359,24 +397,63 @@ int* path(char* alpha, int* tau, int* tau_len)
 }
 
 
+char* lambda_transition(int q1, char c, int q2)
+{
+    int transition = first_transition[q1];
+    while(transition != -1)
+    {
+        if(label[transition] == c && to[transition] == q2)
+        {
+            return lambda[transition];
+        }
+        transition = next_transition[transition];
+    }
+    return strdup("");
+}
+
+
+void output_label(char* alpha, char* result)
+{
+    int alpha_len = strlen(alpha), state1 = start, state2, i; char* output;
+    result[0] = '\0';
+
+    for(i = 0; i < alpha_len; i++)
+    {
+        state2 = delta(state1, alpha[i]);
+        if(state2 != -1)
+        {
+            output = lambda_transition(state1, alpha[i], state2);
+            result = strcat(result, output);
+            state1 = state2;
+        }
+    }
+}
+
+
 int find_equivalent(int state)
 {
     return search(state, h(state));
 }
 
 
-void reduce(char* alpha, int* tau, int tau_len, int l)
+void reduce(char* alpha, int length)
 {
-    int i, p;
-    for(i = 1; tau_len - i == l; i++ )
+    int i, p, tp, state, tau_len;
+    int tau[MAX_WORD_SIZE];
+    path(alpha, tau, &tau_len);
+    //printf("alpha is %s\n", alpha);
+    for(i = 1; tau_len - i >= length; ++i )
     {
-        p = tau_len - i - 1;
-        int tp = tau[p];
-        int state = find_equivalent(tp);
+        p = tau_len - i;
+        tp = tau[p];
+        state = find_equivalent(tp);
+        //printf("searching equiv for %d ", tp);
         if(state != -1)
         {
             delete_state(tp);
+            // printf("DELETING %d ", tp);
             delete_transition_by_signature(tau[p-1], alpha[p-1]);
+            add_transition(tau[p-1], alpha[p-1], state);
         }
         else
             insert(tp, h(tp));
@@ -387,18 +464,19 @@ void reduce(char* alpha, int* tau, int tau_len, int l)
 int h(int n)
 {
     int hash_code;
-    int first = first_transition[n];
-    if (first == -1) hash_code = 1;
+    int transition = first_transition[n];
+    if (transition == -1) hash_code = 1;
     else
     {
-        hash_code = ((label[first] * 257) % hash_length) + to[first];
-        first = next_transition[first];
+        hash_code = ((label[transition] * 257) % hash_length) + to[transition];
+        transition = next_transition[transition];
     }
-    while(first != -1)
+    while(transition != -1)
     {
-        hash_code = ((hash_code * 257) % hash_length) + label[first];
-        hash_code = ((hash_code * 257) % hash_length) + to[first];
-        first  = next_transition[first];
+        hash_code = ((hash_code * 257) % hash_length) + label[transition];
+        hash_code = ((hash_code * 257) % hash_length) + to[transition];
+        hash_code = ((hash_code * 257) % hash_length) + lambda[transition];
+        transition  = next_transition[transition];
     }
     return (hash_code + final[n]) % hash_length;
 }
@@ -407,20 +485,64 @@ int h(int n)
 char equal(int n, int m)
 {
     char flag = 0;
-    if(final[n] == final[m])
+    if(final[n] == final[m] && strcmp(psi[n], psi[m]) == 0)
         flag = 1;
     if(flag)
     {
         int transition_n = first_transition[n], transition_m = first_transition[m];
-        while(label[transition_n] == label[transition_m] && next_transition[transition_n] != -1 && next_transition[transition_m] != -1)
+        while(label[transition_n] == label[transition_m] && lambda[transition_n] == lambda[transition_m] && next_transition[transition_n] != -1 && next_transition[transition_m] != -1)
         {
             transition_n = next_transition[transition_n];
             transition_m = next_transition[transition_m];
         }
-        if(next_transition[transition_m] != next_transition[transition_n] || label[transition_n] != label[transition_m])
+        if(next_transition[transition_m] != next_transition[transition_n] || label[transition_n] != label[transition_m] || strcmp(lambda[transition_n], lambda[transition_m]) != 0)
             return 0;
     }
     return flag;
+}
+
+void depth_first_search(int state, char* label, char* output_label, FILE* file)
+{
+    char c; int vertex;
+    int label_length = strlen(label), output_label_length = strlen(output_label);
+    if(final[state])
+    {
+        char* new_output_label = malloc(output_label_length + strlen(psi[state]) + 1);
+        strcpy(new_output_label, output_label);
+        strcat(new_output_label, psi[state]);
+        new_output_label[output_label_length + strlen(psi[state]) + 1] = '\0';
+        fprintf(file, "%s %s\n", label, new_output_label);
+    }
+
+    for(c = 33; c <= 126; c++) {
+        vertex = delta(state, c);
+        if(vertex != -1)
+        {
+            char* new_label = malloc(label_length + 2);
+            strcpy(new_label, label);
+            new_label[label_length] = c;
+            new_label[label_length + 1] = '\0';
+
+            char* new_output_label = malloc(output_label_length + strlen(lambda_transition(state, c, vertex)) + 1);
+            strcpy(new_output_label, output_label);
+            strcat(new_output_label, lambda_transition(state, c, vertex));
+            new_output_label[output_label_length + strlen(lambda_transition(state, c, vertex)) + 1] = '\0';
+            depth_first_search(vertex, new_label, new_output_label, file);
+            free(new_label);
+        }
+    }
+}
+
+void print_transducer()
+{
+    FILE *file = fopen("dict/transducer", "w");
+    if (file == NULL)
+    {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+    depth_first_search(start, "", "", file);
+    fclose(file);
 }
 
 
@@ -429,39 +551,51 @@ void build_subseq_trans(char* filename)
     allocate_memory(); initialize_hash();
     read_dictionary(filename);
 
-    int i, j, t, tau_len, c;
+    int i, j, t, c, tau_len;
     char *alpha, *beta, *alpha_prim;
     char alpha_len; char dummy[2];
 
-    int tau[51]; int p[51]; int tau_prim[51];
-    char* output[51]; char* output_labels[51];
-    char substring[51]; char prefix[51]; char path_label[51];
+    int tau[MAX_WORD_SIZE]; int p[MAX_WORD_SIZE]; int tau_prim[MAX_WORD_SIZE];
+    char* output[MAX_WORD_SIZE]; char* output_labels[MAX_WORD_SIZE];
+    char substring[MAX_WORD_SIZE]; char prefix[MAX_WORD_SIZE]; char path_label[MAX_WORD_SIZE];
 
     alpha = dictionary[0].first;
     beta = dictionary[0].second;
     alpha_len = strlen(alpha);
+
     for(t = 0; t <= alpha_len; t++)
         add_state(t);
+
     start = 0;
-    final[strlen(alpha) + 1] = 1;
-    for(t = 0; t < strlen(alpha); t++)
+    final[alpha_len] = 1;
+    psi[alpha_len] = "";
+
+    for(t = 0; t < alpha_len; t++)
         add_transition(t, alpha[t], t + 1);
 
-    for ( j = 1; j < dictionary_size; j++)
+    add_output(0, alpha[0], beta);
+    for(t = 1; t < alpha_len; t++)
+        add_output(t, alpha[t], "");
+
+    for ( j = 1; j < dictionary_size; j++ )
     {
+
         alpha = dictionary[j].first;
         beta = dictionary[j].second;
         alpha_prim = dictionary[j - 1].first;
         alpha_len = strlen(alpha);
-        tau = path(alpha, tau, &tau_len);
-        reduce(alpha_prim, tau, tau_len, strlen(alpha_prim));
+        path(alpha, tau, &tau_len);
+
+        reduce(alpha_prim, tau_len);
 
         // P = < |Q| + 1, ... , |Q| + |apha| - |tau| + 1 >
         for(i = 0; i <= alpha_len - tau_len ; i++)
         {
             p[i] = get_free_state_number();
             add_state(p[i]);
+           // printf("%d add state ", p[i]);
         }
+        //printf("\n");
 
         // tau' = tau . P
         for(i = 0; i < tau_len; i++)
@@ -469,12 +603,62 @@ void build_subseq_trans(char* filename)
         for(i = tau_len; i <= alpha_len; i++)
             tau_prim[i] = p[i - tau_len];
 
+        for(i = 0; i < alpha_len; i++)
+        {
+            strncpy(substring, alpha, i + 1); // substring is alpha[0...i]
+            substring[i+1] = 0;
+
+            output_label(substring, path_label);
+            lcp(path_label, beta, prefix);
+            output[i] = strdup(prefix); // Л(i)
+            output_labels[i] = path_label;
+        }
+
         final[p[alpha_len - tau_len]] = 1;
-        for(i = tau_len - 1; i < alpha_len; i++)
+        for(i = tau_len - 1; i < alpha_len; i++){
             add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
+            //printf("adding tr %d %c %d ", tau_prim[i], alpha[i], tau_prim[i+1]);
+        }
+        //printf("\n");
+
+        for(i = 0; i < tau_len - 1; i++){
+            add_output(tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
+            //printf("adding output %d %c %s\n ", tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
+        }
+        //printf("\n");
+
+        //printf("adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
+        add_output(tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
+
+        for(i = tau_len; i < alpha_len; i++){
+            add_output(tau_prim[i], alpha[i], "");
+            // printf("adding output %d %c with epsilon", tau_prim[i], alpha[i]);
+        }
+        // printf("\n");
+
+        for(i = 0; i < tau_len - 1; i++)
+            for(c = 33; c <= 126; c++)
+            {
+                if(c != alpha[i] && delta(tau_prim[i], c) != -1)
+                {
+                    //printf("%d %c \n", i, c);
+                    dummy[0] = c; dummy[1] = 0;
+                    //printf("%s \n", output[i]);
+                    add_output(tau_prim[i], c, strrem(output[i], strcat(output[i], dummy)));
+                   //printf("adding output %d %c with %s", tau_prim[i], c, strrem(output[i], strcat(output[i], dummy)));
+                }
+            }
+
+        for(i = 0; i < tau_len; i++)
+            if(final[tau[i]])
+                psi[tau[i]] = strrem(output[i-1], strcat(output_labels[i], psi[tau[i]]));
+        psi[p[alpha_len - tau_len]] = "";
+
     }
+    reduce(alpha, 1);
 
+    printf("NUMBER OF STATES %d \n", number_of_states);
+    print_transducer();
     finalize_hash(); free_memory();
-
-    printf("%d \n", number_of_states);
 }
+
