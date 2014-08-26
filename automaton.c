@@ -441,17 +441,14 @@ void reduce(char* alpha, int length)
     int i, p, tp, state, tau_len;
     int tau[MAX_WORD_SIZE];
     path(alpha, tau, &tau_len);
-    //printf("alpha is %s\n", alpha);
     for(i = 1; tau_len - i >= length; ++i )
     {
         p = tau_len - i;
         tp = tau[p];
         state = find_equivalent(tp);
-        //printf("searching equiv for %d ", tp);
         if(state != -1)
         {
             delete_state(tp);
-            // printf("DELETING %d ", tp);
             delete_transition_by_signature(tau[p-1], alpha[p-1]);
             add_transition(tau[p-1], alpha[p-1], state);
         }
@@ -593,9 +590,7 @@ void build_subseq_trans(char* filename)
         {
             p[i] = get_free_state_number();
             add_state(p[i]);
-           // printf("%d add state ", p[i]);
         }
-        //printf("\n");
 
         // tau' = tau . P
         for(i = 0; i < tau_len; i++)
@@ -617,9 +612,7 @@ void build_subseq_trans(char* filename)
         final[p[alpha_len - tau_len]] = 1;
         for(i = tau_len - 1; i < alpha_len; i++){
             add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
-            //printf("adding tr %d %c %d ", tau_prim[i], alpha[i], tau_prim[i+1]);
         }
-        //printf("\n");
 
         for(i = 0; i < tau_len - 1; i++){
             add_output(tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
