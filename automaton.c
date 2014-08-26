@@ -550,13 +550,18 @@ void build_subseq_trans(char* filename)
     allocate_memory(); initialize_hash();
     read_dictionary(filename);
 
-    int i, j, t, c, tau_len;
-    char *alpha, *beta, *alpha_prim;
-    char alpha_len; char dummy[2];
+    int i, j, t, c, tau_len, alpha_len;
+    char *alpha, *beta, *alpha_prim, *path_label;
+    char dummy[2];
 
-    int tau[MAX_WORD_SIZE]; int p[MAX_WORD_SIZE]; int tau_prim[MAX_WORD_SIZE];
-    char* output[MAX_WORD_SIZE]; char* output_labels[MAX_WORD_SIZE];
-    char substring[MAX_WORD_SIZE]; char prefix[MAX_WORD_SIZE]; char path_label[MAX_WORD_SIZE];
+    int tau[MAX_WORD_SIZE];
+    int tau_prim[MAX_WORD_SIZE];
+    int p[MAX_WORD_SIZE];
+
+    char* output[MAX_WORD_SIZE];
+    char* output_labels[MAX_WORD_SIZE];
+    char substring[MAX_WORD_SIZE];
+    char prefix[MAX_WORD_SIZE];
 
     alpha = dictionary[0].first;
     beta = dictionary[0].second;
