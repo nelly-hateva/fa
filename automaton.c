@@ -655,8 +655,7 @@ void build_subseq_trans(char* filename)
     }
     reduce(alpha, 1);
 
-    printf("NUMBER OF STATES %d \n", number_of_states);
     print_transducer();
+    printf("NUMBER OF STATES %d \n", number_of_states);
     finalize_hash(); free_memory();
 }
-
