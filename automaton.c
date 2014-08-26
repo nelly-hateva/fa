@@ -641,11 +641,9 @@ void build_subseq_trans(char* filename)
             {
                 if(c != alpha[i] && delta(tau_prim[i], c) != -1)
                 {
-                    //printf("%d %c \n", i, c);
-                    dummy[0] = c; dummy[1] = 0;
-                    //printf("%s \n", output[i]);
-                    add_output(tau_prim[i], c, strrem(output[i], strcat(output[i], dummy)));
-                   //printf("adding output %d %c with %s", tau_prim[i], c, strrem(output[i], strcat(output[i], dummy)));
+                    dummy[0] = c; dummy[1] = '\0';
+                    add_output(tau_prim[i], c, dummy);
+                    printf("adding output %d %s", tau_prim[i], dummy);
                 }
             }
 
