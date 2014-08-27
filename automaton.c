@@ -206,13 +206,14 @@ int get_free_state_number()
 }
 
 
-void lcp(char* alpha, char* beta, char* result) // longest common prefix
+void longest_common_prefix(char* alpha, char* beta, char* prefix)
 {
     int i = 0;
+    for(i = 0; i < MAX_WORD_SIZE; i++)
+        prefix[i] = 0;
     while(i < strlen(alpha) && i < strlen(beta) && alpha[i] == beta[i])
         i++;
-    strncpy(result, alpha, i);
-    result[i] = 0;
+    strncpy(prefix, alpha, i);
 }
 
 
@@ -412,23 +413,22 @@ char* lambda_transition(int q1, char c, int q2)
 }
 
 
-char* output_label(char* alpha)
+void output_label(char* word, int position, char* result)
 {
-    int alpha_len = strlen(alpha);
-    int state1 = start, state2;
     int i;
-    char result[MAX_WORD_SIZE] = {'\0'};
+    int state1 = start, state2;
 
-    for(i = 0; i < alpha_len; i++)
+    for(i = 0; i < MAX_WORD_SIZE; i++)
+       result[i] = 0;
+    for(i = 0; i <= position; i++)
     {
-        state2 = delta(state1, alpha[i]);
+        state2 = delta(state1, word[i]);
         if(state2 != -1)
         {
-            strcat(result, lambda_transition(state1, alpha[i], state2));
+            strcat(result, lambda_transition(state1, word[i], state2));
             state1 = state2;
         }
     }
-    return result;
 }
 
 
@@ -551,7 +551,7 @@ void build_subseq_trans(char* filename)
     read_dictionary(filename);
 
     int i, j, t, c, tau_len, alpha_len;
-    char *alpha, *beta, *alpha_prim, *path_label;
+    char *alpha, *beta, *alpha_prim;
     char dummy[2];
 
     int tau[MAX_WORD_SIZE];
@@ -560,7 +560,7 @@ void build_subseq_trans(char* filename)
 
     char* output[MAX_WORD_SIZE];
     char* output_labels[MAX_WORD_SIZE];
-    char substring[MAX_WORD_SIZE];
+    char path_label[MAX_WORD_SIZE];
     char prefix[MAX_WORD_SIZE];
 
     alpha = dictionary[0].first;
@@ -607,12 +607,9 @@ void build_subseq_trans(char* filename)
 
         for(i = 0; i < alpha_len; i++)
         {
-            strncpy(substring, alpha, i + 1); // substring is alpha[0...i]
-            substring[i+1] = 0;
-
-            path_label = output_label(substring);
-            lcp(path_label, beta, prefix);
-            output[i] = strdup(prefix); // Л(i)
+            output_label(alpha, i, path_label);
+            longest_common_prefix(path_label, beta, prefix);
+            output[i] = prefix; // Л(i)
             output_labels[i] = path_label;
         }
 
@@ -623,18 +620,17 @@ void build_subseq_trans(char* filename)
 
         for(i = 0; i < tau_len - 1; i++){
             add_output(tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
-            //printf("adding output %d %c %s\n ", tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
+            printf("adding output %d %c %s\n ", tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
         }
-        //printf("\n");
-
-        //printf("adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
+        printf("\n");
+        printf("adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
         add_output(tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
 
         for(i = tau_len; i < alpha_len; i++){
             add_output(tau_prim[i], alpha[i], "");
-            // printf("adding output %d %c with epsilon", tau_prim[i], alpha[i]);
+            printf("adding output %d %c with epsilon", tau_prim[i], alpha[i]);
         }
-        // printf("\n");
+        printf("\n");
 
         for(i = 0; i < tau_len - 1; i++)
             for(c = 33; c <= 126; c++)
