@@ -45,6 +45,30 @@ void delete_transition(int);
 char equal(int, int);
 
 
+// COMMON STRING OPERATIONS
+
+void longest_common_prefix(char* first_word, char* second_word, char* prefix)
+{
+    int i = 0;
+    int first_word_length = strlen(first_word);
+    int second_word_length = strlen(second_word);
+    while(i < first_word_length && i < second_word_length && first_word[i] == second_word[i])
+        i++;
+    strncpy(prefix, first_word, i);
+    prefix[i] = '\0';
+}
+
+
+void string_remainder(char* first_word, char* second_word, char* remainder)
+{
+    int first_word_length = strlen(first_word);
+    int difference = strlen(second_word) - first_word_length;
+    if(difference > 0)
+        memcpy(remainder, second_word + first_word_length, difference);
+    remainder[difference] = '\0';
+}
+
+
 void allocate_memory()
 {
     number_of_states = 0;
@@ -206,28 +230,7 @@ int get_free_state_number()
 }
 
 
-void longest_common_prefix(char* alpha, char* beta, char* prefix)
-{
-    int i = 0;
-    for(i = 0; i < MAX_WORD_SIZE; i++)
-        prefix[i] = 0;
-    while(i < strlen(alpha) && i < strlen(beta) && alpha[i] == beta[i])
-        i++;
-    strncpy(prefix, alpha, i);
-}
 
-
-char* strrem(char* alpha, char* beta)
-{
-    char result[strlen(beta)];
-    if(strlen(alpha) < strlen(beta))
-    {
-        memcpy(result, beta + strlen(alpha), strlen(beta) - strlen(alpha));
-    }
-    else
-        result[0] = '\0';
-    return strdup(result);
-}
 
 
 void add_state(int n)
