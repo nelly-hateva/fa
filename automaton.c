@@ -401,18 +401,16 @@ int* path(char* alpha, int* tau, int* tau_len)
 }
 
 
-char* lambda_transition(int q1, char c, int q2)
+char* lambda_transition(int state, char character)
 {
-    int transition = first_transition[q1];
+    int transition = first_transition[state];
     while(transition != -1)
     {
-        if(label[transition] == c && to[transition] == q2)
-        {
+        if(label[transition] == character)
             return lambda[transition];
-        }
         transition = next_transition[transition];
     }
-    return strdup("");
+    return "";
 }
 
 
