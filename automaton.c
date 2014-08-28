@@ -11,6 +11,7 @@
 #define GARBAGE_SIZE 1000
 #define MAX_WORD_SIZE 64
 #define MAXIMUM_LINE_SIZE 100
+#define ALPHABET_SIZE 93
 // wc -L filename gives the length of the longest line in a file
 
 extern int find(int, int);
@@ -418,18 +419,26 @@ void output_label(char* word, int position, char* result)
 {
     int i;
     int state1 = start, state2;
+    int result_length = 0;
+    char* output;
 
-    for(i = 0; i < MAX_WORD_SIZE; i++)
-       result[i] = 0;
     for(i = 0; i <= position; i++)
     {
         state2 = delta(state1, word[i]);
         if(state2 != -1)
         {
-            strcat(result, lambda_transition(state1, word[i], state2));
+            output = lambda_transition(state1, word[i]);
+            result_length += strlen(output);
+            if(i == 0)
+                strcpy(result, output);
+            else
+                strcat(result, output);
             state1 = state2;
         }
+        else
+            break;
     }
+    result[result_length] = '\0';
 }
 
 
@@ -504,7 +513,7 @@ char equal(int n, int m)
 void depth_first_search(int state, char* label, char* output_label, FILE* file)
 {
     char c; int vertex;
-    int label_length = strlen(label), output_label_length = strlen(output_label);
+    int label_length = strlen(label), output_label_length = strlen(output_label), length;
     if(final[state])
     {
         char* new_output_label = malloc(output_label_length + strlen(psi[state]) + 1);
@@ -512,6 +521,7 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
         strcat(new_output_label, psi[state]);
         new_output_label[output_label_length + strlen(psi[state]) + 1] = '\0';
         fprintf(file, "%s %s\n", label, new_output_label);
+        free(new_output_label);
     }
 
     for(c = 33; c <= 126; c++) {
@@ -523,12 +533,15 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
             new_label[label_length] = c;
             new_label[label_length + 1] = '\0';
 
-            char* new_output_label = malloc(output_label_length + strlen(lambda_transition(state, c, vertex)) + 1);
+            length = output_label_length + strlen(lambda_transition(state, c)) + 1;
+            char* new_output_label = malloc(length);
             strcpy(new_output_label, output_label);
-            strcat(new_output_label, lambda_transition(state, c, vertex));
-            new_output_label[output_label_length + strlen(lambda_transition(state, c, vertex)) + 1] = '\0';
+            strcat(new_output_label, lambda_transition(state, c));
+            new_output_label[length] = '\0';
+
             depth_first_search(vertex, new_label, new_output_label, file);
             free(new_label);
+            free(new_output_label);
         }
     }
 }
@@ -551,9 +564,9 @@ void build_subseq_trans(char* filename)
     allocate_memory(); initialize_hash();
     read_dictionary(filename);
 
-    int i, j, t, c, tau_len, alpha_len;
+    int i, j, k, c, tau_len, alpha_len;
+    char* current_output_label;
     char *alpha, *beta, *alpha_prim;
-    char dummy[2];
 
     int tau[MAX_WORD_SIZE];
     int tau_prim[MAX_WORD_SIZE];
@@ -563,28 +576,33 @@ void build_subseq_trans(char* filename)
     char* output_labels[MAX_WORD_SIZE];
     char path_label[MAX_WORD_SIZE];
     char prefix[MAX_WORD_SIZE];
+    char remainder[MAX_WORD_SIZE];
+    char concatenation[MAX_WORD_SIZE];
+
+    char* remainders[MAX_WORD_SIZE][ALPHABET_SIZE] = {{NULL}};
+    char* old_output_labels[MAX_WORD_SIZE] = {NULL};
+    int path_label_length;
 
     alpha = dictionary[0].first;
     beta = dictionary[0].second;
     alpha_len = strlen(alpha);
 
-    for(t = 0; t <= alpha_len; t++)
-        add_state(t);
+    for(i = 0; i <= alpha_len; ++i)
+        add_state(i);
 
     start = 0;
     final[alpha_len] = 1;
     psi[alpha_len] = "";
 
-    for(t = 0; t < alpha_len; t++)
-        add_transition(t, alpha[t], t + 1);
+    for(i = 0; i < alpha_len; ++i)
+        add_transition(i, alpha[i], i + 1);
 
     add_output(0, alpha[0], beta);
-    for(t = 1; t < alpha_len; t++)
-        add_output(t, alpha[t], "");
+    for(i = 1; i < alpha_len; ++i)
+        add_output(i, alpha[i], "");
 
     for ( j = 1; j < dictionary_size; j++ )
     {
-
         alpha = dictionary[j].first;
         beta = dictionary[j].second;
         alpha_prim = dictionary[j - 1].first;
@@ -619,34 +637,76 @@ void build_subseq_trans(char* filename)
             add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
         }
 
-        for(i = 0; i < tau_len - 1; i++){
-            add_output(tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
-            printf("adding output %d %c %s\n ", tau_prim[i], alpha[i], strrem(output[i], output[i + 1]));
+        for(i = 0; i < tau_len - 1;  ++i)
+            old_output_labels[i] = lambda_transition(tau_prim[i], alpha[i]);
+        add_output(tau_prim[0], alpha[0], output[0]);
+        if(j == 1)
+        printf("0. adding output %d %c %s\n ", tau_prim[0], alpha[0], output[0]);
+        for(i = 1; i < tau_len - 1; i++){
+            string_remainder(output[i], output[i + 1], remainder);
+            add_output(tau_prim[i], alpha[i], remainder);
+            if(j == 1) printf("1. adding output %d %c %s\n ", tau_prim[i], alpha[i], remainder);
         }
-        printf("\n");
-        printf("adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
-        add_output(tau_prim[tau_len - 1], alpha[tau_len - 1], strrem(output[tau_len - 1], beta));
+
+        string_remainder(output[tau_len - 1], beta, remainder);
+        if(j == 1) printf("2. adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], remainder );
+        add_output(tau_prim[tau_len - 1], alpha[tau_len - 1], remainder);
 
         for(i = tau_len; i < alpha_len; i++){
             add_output(tau_prim[i], alpha[i], "");
-            printf("adding output %d %c with epsilon", tau_prim[i], alpha[i]);
+            if(j == 1) printf("3. adding output %d %c with epsilon\n", tau_prim[i], alpha[i]);
         }
-        printf("\n");
 
-        for(i = 0; i < tau_len - 1; i++)
+        for(i = 0; i < tau_len; i++)
             for(c = 33; c <= 126; c++)
             {
                 if(c != alpha[i] && delta(tau_prim[i], c) != -1)
                 {
-                    dummy[0] = c; dummy[1] = '\0';
-                    add_output(tau_prim[i], c, dummy);
-                    printf("adding output %d %s", tau_prim[i], dummy);
+
+                    path_label[0] = '\0'; path_label_length = 0;
+                    for(k = 0; k < i + 1; ++k)
+                    {
+                        if(k == i)
+                        {
+                            printf("blqkalaka\n");
+                            current_output_label = lambda_transition(tau_prim[i], c);
+                            strcat(path_label, current_output_label);
+                            path_label_length += strlen(current_output_label);
+                        }
+                        else
+                        {
+                            printf("blq  ");
+                            strcat(path_label, old_output_labels[k]);
+                            printf("pl %s and old is %s\n", path_label, old_output_labels[k]);
+                            path_label_length += strlen(old_output_labels[k]);
+                        }
+                    }
+
+                    path_label[path_label_length] = '\0';
+                    string_remainder(output[i], path_label, remainder);
+                    printf("i is %d remi %d %c %s while concatenation is %s path label is %s and output is %s\n",i, tau_prim[i], c, remainder, concatenation, path_label, output[i] );
+                    remainders[i][c - 33] = remainder;
+                }
+            }
+
+        for(i = 0; i < tau_len; i++)
+            for(c = 33; c <= 126; c++)
+            {
+                if(remainders[i][c - 33] != NULL)
+                {
+                    add_output(tau_prim[i], c, remainders[i][c - 33]);
+                    if(j == 2) printf("4. adding output %d %c %s\n", tau_prim[i], c, remainders[i][c - 33]);
+                    remainders[i][c - 33] = NULL;
                 }
             }
 
         for(i = 0; i < tau_len; i++)
             if(final[tau[i]])
-                psi[tau[i]] = strrem(output[i-1], strcat(output_labels[i], psi[tau[i]]));
+            {
+                string_remainder(output[i-1], strcat(output_labels[i], psi[tau[i]]), remainder);
+                psi[tau[i]] = remainder;
+                if(j == 2) printf("adding psi %d %s\n", tau[i], psi[tau[i]]);
+            }
         psi[p[alpha_len - tau_len]] = "";
 
     }
