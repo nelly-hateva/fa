@@ -284,13 +284,16 @@ void add_transition(int from_state, char label_transition, int to_state)
 
 }
 
-void add_output(int state, char c, char* string)
+
+void set_output(int state, char c, char* string)
 {
     int transition = first_transition[state];
     while(transition != -1)
     {
         if(label[transition] == c)
         {
+          //  if(lambda[transition] != -1)
+            //    free(lambda[transition]);
             lambda[transition] = strdup(string);
             return;
         }
@@ -577,7 +580,6 @@ void build_subseq_trans(char* filename)
     char path_label[MAX_WORD_SIZE];
     char prefix[MAX_WORD_SIZE];
     char remainder[MAX_WORD_SIZE];
-    char concatenation[MAX_WORD_SIZE];
 
     char* remainders[MAX_WORD_SIZE][ALPHABET_SIZE] = {{NULL}};
     char* old_output_labels[MAX_WORD_SIZE] = {NULL};
@@ -597,13 +599,14 @@ void build_subseq_trans(char* filename)
     for(i = 0; i < alpha_len; ++i)
         add_transition(i, alpha[i], i + 1);
 
-    add_output(0, alpha[0], beta);
+    set_output(0, alpha[0], beta);
     for(i = 1; i < alpha_len; ++i)
-        add_output(i, alpha[i], "");
+        set_output(i, alpha[i], "");
 
     for ( j = 1; j < dictionary_size; j++ )
     {
         alpha = dictionary[j].first;
+
         beta = dictionary[j].second;
         alpha_prim = dictionary[j - 1].first;
         alpha_len = strlen(alpha);
@@ -628,34 +631,35 @@ void build_subseq_trans(char* filename)
         {
             output_label(alpha, i, path_label);
             longest_common_prefix(path_label, beta, prefix);
-            output[i] = prefix; // Л(i)
+            // free
+            output[i] = strdup(prefix); // Л(i)
+            if(j==4&&i<3) printf("output %d is %s\n", i, output[i]);
             output_labels[i] = path_label;
         }
 
         final[p[alpha_len - tau_len]] = 1;
         for(i = tau_len - 1; i < alpha_len; i++){
-            add_transition(tau_prim[i], alpha[i], tau_prim[i+1]);
+            add_transition(tau_prim[i], alpha[i], tau_prim[i + 1]);
         }
 
         for(i = 0; i < tau_len - 1;  ++i)
             old_output_labels[i] = lambda_transition(tau_prim[i], alpha[i]);
-        add_output(tau_prim[0], alpha[0], output[0]);
-        if(j == 1)
-        printf("0. adding output %d %c %s\n ", tau_prim[0], alpha[0], output[0]);
-        for(i = 1; i < tau_len - 1; i++){
-            string_remainder(output[i], output[i + 1], remainder);
-            add_output(tau_prim[i], alpha[i], remainder);
-            if(j == 1) printf("1. adding output %d %c %s\n ", tau_prim[i], alpha[i], remainder);
+
+        set_output(tau_prim[0], alpha[0], output[0]);
+        if(j == 4) printf("0. adding output %d %c %s\n ", tau_prim[0], alpha[0], output[0]);
+        for(i = 1; i < tau_len - 1; ++i)
+        {
+            string_remainder(output[i - 1], output[i], remainder);
+            set_output(tau_prim[i], alpha[i], remainder);
+            if(j == 4) printf("1. adding output %d %c %s\n ", tau_prim[i], alpha[i], remainder);
         }
 
         string_remainder(output[tau_len - 1], beta, remainder);
-        if(j == 1) printf("2. adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], remainder );
-        add_output(tau_prim[tau_len - 1], alpha[tau_len - 1], remainder);
+        if(j == 4) printf("2. adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], remainder );
+        set_output(tau_prim[tau_len - 1], alpha[tau_len - 1], remainder);
 
-        for(i = tau_len; i < alpha_len; i++){
-            add_output(tau_prim[i], alpha[i], "");
-            if(j == 1) printf("3. adding output %d %c with epsilon\n", tau_prim[i], alpha[i]);
-        }
+        for(i = tau_len; i < alpha_len; i++)
+            set_output(tau_prim[i], alpha[i], "");
 
         for(i = 0; i < tau_len; i++)
             for(c = 33; c <= 126; c++)
@@ -668,24 +672,29 @@ void build_subseq_trans(char* filename)
                     {
                         if(k == i)
                         {
-                            printf("blqkalaka\n");
                             current_output_label = lambda_transition(tau_prim[i], c);
                             strcat(path_label, current_output_label);
                             path_label_length += strlen(current_output_label);
                         }
                         else
                         {
-                            printf("blq  ");
                             strcat(path_label, old_output_labels[k]);
-                            printf("pl %s and old is %s\n", path_label, old_output_labels[k]);
+                           // printf("pl %s and old is %s\n", path_label, old_output_labels[k]);
                             path_label_length += strlen(old_output_labels[k]);
                         }
                     }
 
                     path_label[path_label_length] = '\0';
-                    string_remainder(output[i], path_label, remainder);
-                    printf("i is %d remi %d %c %s while concatenation is %s path label is %s and output is %s\n",i, tau_prim[i], c, remainder, concatenation, path_label, output[i] );
-                    remainders[i][c - 33] = remainder;
+                    if(i == 0)
+                        remainders[i][c - 33] = strdup(path_label);
+                    else
+                    {
+                        string_remainder(output[i - 1], path_label, remainder);
+                        remainders[i][c - 33] = strdup(remainder);
+                    }
+                    if(j == 4&&(i==1||i==2))
+                        printf("%d remainder of %s and %s is %s\n", i,  output[i], path_label, remainder);
+                    
                 }
             }
 
@@ -694,8 +703,9 @@ void build_subseq_trans(char* filename)
             {
                 if(remainders[i][c - 33] != NULL)
                 {
-                    add_output(tau_prim[i], c, remainders[i][c - 33]);
-                    if(j == 2) printf("4. adding output %d %c %s\n", tau_prim[i], c, remainders[i][c - 33]);
+                    if(j == 4) printf("4. adding output %d %c %s\n", tau_prim[i], c, remainders[i][c - 33]);
+                    set_output(tau_prim[i], c, remainders[i][c - 33]);
+                    free(remainders[i][c - 33]);
                     remainders[i][c - 33] = NULL;
                 }
             }
@@ -704,15 +714,14 @@ void build_subseq_trans(char* filename)
             if(final[tau[i]])
             {
                 string_remainder(output[i-1], strcat(output_labels[i], psi[tau[i]]), remainder);
-                psi[tau[i]] = remainder;
-                if(j == 2) printf("adding psi %d %s\n", tau[i], psi[tau[i]]);
+                psi[tau[i]] = strdup(remainder);
+               // printf("adding psi %d %s\n", tau[i], psi[tau[i]]);
             }
         psi[p[alpha_len - tau_len]] = "";
-
     }
     reduce(alpha, 1);
 
     print_transducer();
-    printf("NUMBER OF STATES %d \n", number_of_states);
+    //printf("NUMBER OF STATES %d \n", number_of_states);
     finalize_hash(); free_memory();
 }
