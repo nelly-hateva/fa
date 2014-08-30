@@ -558,7 +558,7 @@ void print_transducer()
 }
 
 
-void build_subseq_trans(char* filename)
+void create_minimal_transducer_for_given_list(char* filename)
 {
     allocate_memory(); initialize_hash();
     read_dictionary(filename);

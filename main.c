@@ -11,7 +11,7 @@ int main( int argc, char* argv[] )
         exit(0);
     }
 
-    build_subseq_trans(argv[1]);
+    create_minimal_transducer_for_given_list(argv[1]);
 
     return 0;
 }

@@ -3,6 +3,6 @@
 
 #include "pair.h"
 
-void build_subseq_trans(char* filename);
+void create_minimal_transducer_for_given_list(char* filename);
 
 #endif // AUTOMATON_H_INCLUDED
