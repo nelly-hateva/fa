@@ -240,8 +240,6 @@ void add_state(int n)
 
 void add_transition(int from_state, char label_transition, int to_state)
 {
-    if(find(from_state, h(from_state)) != -1)//??
-        delete(from_state,h(from_state)); // ???
     int position;
     if(garbage_transition == -1)
         position = number_of_transitions;
