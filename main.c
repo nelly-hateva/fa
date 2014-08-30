@@ -3,9 +3,9 @@
 #include "automaton.h"
 
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
-    if ( argc != 2 )
+    if (argc != 2)
     {
         printf("Wrong usage. Please specify a file name.\n");
         exit(0);
