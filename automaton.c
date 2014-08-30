@@ -14,8 +14,6 @@
 #define ALPHABET_SIZE 93
 // wc -L filename gives the length of the longest line in a file
 
-extern int find(int, int);
-
 pair* dictionary;
 int memory_for_dictionary;
 int dictionary_size;

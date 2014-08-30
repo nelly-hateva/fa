@@ -132,7 +132,7 @@ int search(int value, int key)
         {
             if(j < 0)
             {
-                printf("%d ",  j);
+                printf("%d \n",  j);
                 exit(EXIT_FAILURE);
             }
             return j;
