@@ -697,9 +697,17 @@ void build_subseq_trans(char* filename)
         for(i = 0; i < tau_len; i++)
             if(final[tau[i]])
             {
-                string_remainder(output[i-1], strcat(output_labels[i], psi[tau[i]]), remainder);
-                psi[tau[i]] = strdup(remainder);
-               // printf("adding psi %d %s\n", tau[i], psi[tau[i]]);
+                path_label[0] = '\0';
+                if(i > 0)
+                    strcpy(path_label, output_labels[i-1]);
+                strcat(path_label, psi[tau[i]]);
+                if(i > 0)
+                {
+                    string_remainder(output[i - 1], path_label, remainder);
+                    psi[tau[i]] = strdup(remainder);
+                }
+                else
+                    psi[tau[i]] = strdup(path_label);
             }
         psi[p[alpha_len - tau_len]] = "";
     }
