@@ -68,6 +68,8 @@ void string_remainder(char* first_word, char* second_word, char* remainder)
 }
 
 
+// MEMORY MANAGEMENT OPERATIONS
+
 void allocate_memory()
 {
     number_of_states = 0;
@@ -229,9 +231,6 @@ int get_free_state_number()
 }
 
 
-
-
-
 void add_state(int n)
 {
     reallocate_memory_for_states();
@@ -298,6 +297,7 @@ void set_output(int state, char c, char* string)
         transition = next_transition[transition];
     }
 }
+
 
 void delete_state(int n)
 {
@@ -511,6 +511,7 @@ char equal(int n, int m)
     return flag;
 }
 
+
 void depth_first_search(int state, char* label, char* output_label, FILE* file)
 {
     char c; int vertex;
@@ -546,6 +547,7 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
         }
     }
 }
+
 
 void print_transducer()
 {
@@ -604,22 +606,19 @@ void build_subseq_trans(char* filename)
     for ( j = 1; j < dictionary_size; j++ )
     {
         alpha = dictionary[j].first;
-
         beta = dictionary[j].second;
         alpha_prim = dictionary[j - 1].first;
         alpha_len = strlen(alpha);
-        path(alpha, tau, &tau_len);
 
+        path(alpha, tau, &tau_len);
         reduce(alpha_prim, tau_len);
 
-        // P = < |Q| + 1, ... , |Q| + |apha| - |tau| + 1 >
         for(i = 0; i <= alpha_len - tau_len ; i++)
         {
             p[i] = get_free_state_number();
             add_state(p[i]);
         }
 
-        // tau' = tau . P
         for(i = 0; i < tau_len; i++)
             tau_prim[i] = tau[i];
         for(i = tau_len; i <= alpha_len; i++)
@@ -644,17 +643,15 @@ void build_subseq_trans(char* filename)
             old_output_labels[i] = lambda_transition(tau_prim[i], alpha[i]);
 
         set_output(tau_prim[0], alpha[0], output[0]);
-        if(j == 4) printf("0. adding output %d %c %s\n ", tau_prim[0], alpha[0], output[0]);
         for(i = 1; i < tau_len - 1; ++i)
         {
             string_remainder(output[i - 1], output[i], remainder);
             set_output(tau_prim[i], alpha[i], remainder);
-            if(j == 4) printf("1. adding output %d %c %s\n ", tau_prim[i], alpha[i], remainder);
         }
 
         string_remainder(output[tau_len - 1], beta, remainder);
-        if(j == 4) printf("2. adding output %d %c %s \n", tau_prim[tau_len - 1], alpha[tau_len - 1], remainder );
         set_output(tau_prim[tau_len - 1], alpha[tau_len - 1], remainder);
+
 
         for(i = tau_len; i < alpha_len; i++)
             set_output(tau_prim[i], alpha[i], "");
@@ -664,7 +661,6 @@ void build_subseq_trans(char* filename)
             {
                 if(c != alpha[i] && delta(tau_prim[i], c) != -1)
                 {
-
                     path_label[0] = '\0'; path_label_length = 0;
                     for(k = 0; k < i + 1; ++k)
                     {
@@ -677,7 +673,6 @@ void build_subseq_trans(char* filename)
                         else
                         {
                             strcat(path_label, old_output_labels[k]);
-                           // printf("pl %s and old is %s\n", path_label, old_output_labels[k]);
                             path_label_length += strlen(old_output_labels[k]);
                         }
                     }
@@ -690,18 +685,15 @@ void build_subseq_trans(char* filename)
                         string_remainder(output[i - 1], path_label, remainder);
                         remainders[i][c - 33] = strdup(remainder);
                     }
-                    if(j == 4&&(i==1||i==2))
-                        printf("%d remainder of %s and %s is %s\n", i,  output[i], path_label, remainder);
-                    
                 }
             }
+
 
         for(i = 0; i < tau_len; i++)
             for(c = 33; c <= 126; c++)
             {
                 if(remainders[i][c - 33] != NULL)
                 {
-                    if(j == 4) printf("4. adding output %d %c %s\n", tau_prim[i], c, remainders[i][c - 33]);
                     set_output(tau_prim[i], c, remainders[i][c - 33]);
                     free(remainders[i][c - 33]);
                     remainders[i][c - 33] = NULL;
