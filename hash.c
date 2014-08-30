@@ -129,14 +129,7 @@ int search(int value, int key)
     while(j!= -1)
     {
         if(j != value && equal(value, j))
-        {
-            if(j < 0)
-            {
-                printf("%d \n",  j);
-                exit(EXIT_FAILURE);
-            }
             return j;
-        }
         j = next[j];
     }
     return -1;
