@@ -287,8 +287,6 @@ void set_output(int state, char c, char* string)
     {
         if(label[transition] == c)
         {
-          //  if(lambda[transition] != -1)
-            //    free(lambda[transition]);
             lambda[transition] = strdup(string);
             return;
         }
@@ -626,10 +624,8 @@ void build_subseq_trans(char* filename)
         {
             output_label(alpha, i, path_label);
             longest_common_prefix(path_label, beta, prefix);
-            // free
-            output[i] = strdup(prefix); // Л(i)
-            if(j==4&&i<3) printf("output %d is %s\n", i, output[i]);
-            output_labels[i] = path_label;
+            output[i] = strdup(prefix);
+            output_labels[i] = strdup(path_label);
         }
 
         final[p[alpha_len - tau_len]] = 1;
@@ -709,7 +705,7 @@ void build_subseq_trans(char* filename)
     }
     reduce(alpha, 1);
 
-    print_transducer();
-    //printf("NUMBER OF STATES %d \n", number_of_states);
+    //  print_transducer();
+    printf("NUMBER OF STATES %d\n", number_of_states);
     finalize_hash(); free_memory();
 }
