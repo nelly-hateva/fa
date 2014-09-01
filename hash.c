@@ -4,7 +4,7 @@
 #define INITIAL_HASH_LENGTH 1024
 #define INITIAL_HASH_CAPACITY 2048
 
-extern int h(int);
+extern int hash_code(int);
 extern char equal(int n, int m);
 
 int* table;
@@ -46,7 +46,7 @@ void resize_hash()
 {
     int element, i, j = 0;
     int *bucket = (int*) malloc(hash_size * sizeof(int));
-    int old_hash_size = hash_size;
+    int previous_value_hash_size = hash_size;
 
     for (i = 0; i < hash_length; ++i)
     {
@@ -70,8 +70,8 @@ void resize_hash()
         next[i] = -1;
 
     hash_size = 0;
-    for (i = 0; i < old_hash_size; ++i)
-        insert(bucket[i], h(bucket[i]));
+    for (i = 0; i < previous_value_hash_size; ++i)
+        insert(bucket[i], hash_code(bucket[i]));
     free(bucket);
 }
 
