@@ -132,9 +132,7 @@ void free_memory()
     free(label);
     free(final_state_output);
     free(output_transition);
-    printf("8tum\n");
     free(free_states_numbers);
-    printf("9tum\n");
     free(free_transitions_numbers);
     free(dictionary);
 }
@@ -408,30 +406,44 @@ void path(char* word, int* path_states, int* path_states_length)
 
 void delete_word(char* word)
 {
-    int i, j = 1;
+    int current_state;
+    int transition;
+    int outgoing_transitions;
     int path_states[MAXIMUM_WORD_SIZE];
     int path_states_size;
+    int number_of_outgoing_transitions[MAXIMUM_WORD_SIZE];
 
     path(word, path_states, &path_states_size);
-    int current_state = path_states[path_states_size - j];
-    int number_of_outgoing_transitions = 0;
 
+    int j = 1;
+    current_state = path_states[path_states_size - j];
     final[current_state] = 0;
-    while(current_state != start)
+    while (j <= path_states_size)
     {
-        for (i = 0; i < number_of_transitions; ++i)
-            if (from[i] == current_state)
-            {
-                ++number_of_outgoing_transitions;
-                if(number_of_outgoing_transitions > 1)
-                    break;
-            }
-        if(number_of_outgoing_transitions > 1)
-            break;
-        else
-            delete_state(current_state);
-        j++;
         current_state = path_states[path_states_size - j];
+        outgoing_transitions = 0;
+        transition = first_transition[current_state];
+        while (transition != -1)
+        {
+            transition = next_transition[transition];
+            ++outgoing_transitions;
+            if (j == 1 && outgoing_transitions > 1)
+                break;
+            else if (outgoing_transitions > 2)
+                break;
+        }
+        number_of_outgoing_transitions[path_states_size - j] = outgoing_transitions;
+        ++j;
+    }
+
+    for (j = path_states_size - 1; j >= 0; --j)
+    {
+        if (j == path_states_size - 1 && number_of_outgoing_transitions[j] == 0)
+            delete_state(path_states[j]);
+        else if (number_of_outgoing_transitions[j] <= 1)
+            delete_state(path_states[j]);
+        else
+            break;
     }
 }
 
@@ -763,9 +775,8 @@ void create_minimal_transducer_for_given_list(char* filename)
     reduce(current_word, 1);
 
     //  print_transducer();
-    delete_word(dictionary[0].first);
+    // delete_word(dictionary[0].first);
     printf("NUMBER OF STATES %d\n", number_of_states);
     finalize_hash();
-    printf("blq\n");
     free_memory();
 }
