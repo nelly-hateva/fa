@@ -300,7 +300,6 @@ void set_output(int state, char character, char* string)
     }
 }
 
-
 void delete_transition(int transition)
 {
     int from_state = from[transition];
@@ -352,21 +351,6 @@ void delete_state(int state)
     ++free_state;
     free_states_numbers[free_state] = state;
     --number_of_states;
-}
-
-
-void delete_transition_by_signature(int from_state, char character)
-{
-    int transition = first_transition[from_state];
-    while (transition != -1)
-    {
-        if (label[transition] == character)
-        {
-            delete_transition(transition);
-            break;
-        }
-        transition = next_transition[transition];
-    }
 }
 
 
@@ -553,7 +537,6 @@ void reduce(char* word, int length)
         if (state != -1)
         {
             delete_state(current_state);
-            delete_transition_by_signature(path_states[position - 1], word[position - 1]);
             set_transition(path_states[position - 1], word[position - 1], state);
         }
         else
