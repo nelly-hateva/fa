@@ -1,7 +1,2 @@
-dict/*
-bin/*
-obj/*
-*.cbp
-*.depend
-*.layout
-*.log
+data/*
+a.out
