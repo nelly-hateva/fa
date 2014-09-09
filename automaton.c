@@ -13,9 +13,9 @@
 #define MAXIMUM_LINE_SIZE 128
 // wc -L file - the length of the longest line in the file
 
-#define FIRST_CHAR 33
-#define LAST_CHAR 196
-#define ALPHABET_SIZE 93
+#define FIRST_CHAR 97
+#define LAST_CHAR 122
+#define ALPHABET_SIZE 26
 
 pair* dictionary;
 int memory_for_dictionary;
@@ -300,6 +300,7 @@ void set_output(int state, char character, char* string)
     }
 }
 
+
 void delete_transition(int transition)
 {
     int from_state = from[transition];
@@ -401,7 +402,7 @@ void delete_word(char* word)
 
     int j = 1;
     current_state = path_states[path_states_size - j];
-    final[current_state] = 0;
+    final[current_state] = -1;
     while (j <= path_states_size)
     {
         current_state = path_states[path_states_size - j];
@@ -586,7 +587,7 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
 
 void print_transducer()
 {
-    FILE *file = fopen("dict/transducer", "w");
+    FILE *file = fopen("data/transducer", "w");
     if (file == NULL)
     {
         printf("Error opening file!\n");
@@ -594,6 +595,33 @@ void print_transducer()
     }
     depth_first_search(start, "", "", file);
     fclose(file);
+}
+
+
+int* used;
+int reachable_states = 0;
+
+void dfs(int state)
+{
+    int transition = first_transition[state];
+    while (transition != -1)
+    {
+        if (used[to[transition]] != 1)
+        {
+            used[to[transition]] = 1;
+            ++reachable_states;
+            dfs(to[transition]);
+        }
+        transition = next_transition[transition];
+    }
+}
+
+
+void test()
+{
+    used = malloc(memory_for_states * sizeof(int));
+    dfs(start);
+    printf("%d STATES ARE REACHABLE \n", reachable_states);
 }
 
 
@@ -673,9 +701,7 @@ void create_minimal_transducer_for_given_list(char* filename)
 
         final[suffix_states[current_word_length - prefix_states_length]] = 1;
         for (i = prefix_states_length - 1; i < current_word_length; ++i)
-        {
             set_transition(temporary_states[i], current_word[i], temporary_states[i + 1]);
-        }
 
         for (i = 0; i < prefix_states_length - 1;  ++i)
             prefix_states_output_labels_previous_values[i] = output_transition_label(temporary_states[i], current_word[i]);
@@ -689,7 +715,6 @@ void create_minimal_transducer_for_given_list(char* filename)
 
         string_remainder(output_labels_new_values[prefix_states_length - 1], current_output, remainder);
         set_output(temporary_states[prefix_states_length - 1], current_word[prefix_states_length - 1], remainder);
-
 
         for (i = prefix_states_length; i < current_word_length; ++i)
             set_output(temporary_states[i], current_word[i], "");
@@ -726,7 +751,6 @@ void create_minimal_transducer_for_given_list(char* filename)
                 }
             }
 
-
         for (i = 0; i < prefix_states_length; ++i)
             for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
             {
@@ -757,8 +781,7 @@ void create_minimal_transducer_for_given_list(char* filename)
     }
     reduce(current_word, 1);
 
-    //  print_transducer();
-    // delete_word(dictionary[0].first);
+    test();
     printf("NUMBER OF STATES %d\n", number_of_states);
     finalize_hash();
     free_memory();
