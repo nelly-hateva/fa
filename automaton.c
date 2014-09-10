@@ -341,6 +341,7 @@ void delete_state(int state)
         delete_transition(transition);
         transition = next;
     }
+
     int i;
     for (i = 0; i < number_of_transitions; ++i)
         if (to[i] == state)
@@ -506,6 +507,7 @@ char equal(int state1, int state2)
     char equals = 0;
     if (final[state1] == final[state2] && strcmp(final_state_output[state1], final_state_output[state2]) == 0)
         equals = 1;
+
     if (equals)
     {
         int transition1 = first_transition[state1], transition2 = first_transition[state2];
@@ -514,7 +516,7 @@ char equal(int state1, int state2)
             transition1 = next_transition[transition1];
             transition2 = next_transition[transition2];
         }
-        if (next_transition[transition2] != next_transition[transition1] || label[transition1] != label[transition2] || strcmp(output_transition[transition1], output_transition[transition2]) != 0)
+        if (next_transition[transition2] != next_transition[transition1] || label[transition1] != label[transition2] || to[transition1] != to[transition2] || strcmp(output_transition[transition1], output_transition[transition2]) != 0)
             return 0;
     }
     return equals;
@@ -604,14 +606,12 @@ int reachable_states = 0;
 void dfs(int state)
 {
     int transition = first_transition[state];
+    used[state] = 1;
+    ++reachable_states;
     while (transition != -1)
     {
         if (used[to[transition]] != 1)
-        {
-            used[to[transition]] = 1;
-            ++reachable_states;
             dfs(to[transition]);
-        }
         transition = next_transition[transition];
     }
 }
@@ -619,9 +619,56 @@ void dfs(int state)
 
 void test()
 {
-    used = malloc(memory_for_states * sizeof(int));
+    used = calloc(memory_for_states , sizeof(int));
     dfs(start);
-    printf("%d STATES ARE REACHABLE \n", reachable_states);
+    
+    if (number_of_states != reachable_states)
+    {
+        int i; int j; int flag;
+        int* states = malloc(number_of_states * sizeof(int));
+        int counter = 0;
+        for (i = 0; i < number_of_transitions; ++i)
+        {
+            flag = 0;
+            for (j = 0; j < counter; ++j)
+                if(states[j] == from[i])
+                    flag = 1;
+            if (flag == 0)
+            {
+                states[counter] = from[i];
+                ++counter;
+            }
+
+            flag = 0;
+            for (j = 0; j < counter; ++j)
+                if(states[j] == to[i])
+                    flag = 1;
+            if(flag == 0)
+            {
+                states[counter] = to[i];
+                ++counter;
+            }
+        }
+        for (i = 0; i < number_of_states; ++i)
+        {
+            if (used[states[i]] != 1)
+            {
+                for(j=0;j<number_of_transitions;++j)
+                {
+                    if(to[j] == states[i])
+                    {
+                        printf("double validation failed\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                printf("unreachable %d\n", states[i]);
+                printf("first tr is %d %c %d\n", from[first_transition[states[i]]], label[first_transition[states[i]]], to[first_transition[states[i]]]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        free(states);
+    }
+    free(used);
 }
 
 
@@ -777,11 +824,12 @@ void create_minimal_transducer_for_given_list(char* filename)
                 else
                     final_state_output[prefix_states[i]] = strdup(label_output);
             }
-        final_state_output[suffix_states[current_word_length - prefix_states_length]] = "";
+        final_state_output[suffix_states[current_word_length - prefix_states_length]] = ""; 
     }
     reduce(current_word, 1);
 
     test();
+   // print_transducer();
     printf("NUMBER OF STATES %d\n", number_of_states);
     finalize_hash();
     free_memory();
