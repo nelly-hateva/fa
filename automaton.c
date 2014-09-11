@@ -600,78 +600,6 @@ void print_transducer()
 }
 
 
-int* used;
-int reachable_states = 0;
-
-void dfs(int state)
-{
-    int transition = first_transition[state];
-    used[state] = 1;
-    ++reachable_states;
-    while (transition != -1)
-    {
-        if (used[to[transition]] != 1)
-            dfs(to[transition]);
-        transition = next_transition[transition];
-    }
-}
-
-
-void test()
-{
-    used = calloc(memory_for_states , sizeof(int));
-    dfs(start);
-    
-    if (number_of_states != reachable_states)
-    {
-        int i; int j; int flag;
-        int* states = malloc(number_of_states * sizeof(int));
-        int counter = 0;
-        for (i = 0; i < number_of_transitions; ++i)
-        {
-            flag = 0;
-            for (j = 0; j < counter; ++j)
-                if(states[j] == from[i])
-                    flag = 1;
-            if (flag == 0)
-            {
-                states[counter] = from[i];
-                ++counter;
-            }
-
-            flag = 0;
-            for (j = 0; j < counter; ++j)
-                if(states[j] == to[i])
-                    flag = 1;
-            if(flag == 0)
-            {
-                states[counter] = to[i];
-                ++counter;
-            }
-        }
-        for (i = 0; i < number_of_states; ++i)
-        {
-            if (used[states[i]] != 1)
-            {
-                for(j=0;j<number_of_transitions;++j)
-                {
-                    if(to[j] == states[i])
-                    {
-                        printf("double validation failed\n");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                printf("unreachable %d\n", states[i]);
-                printf("first tr is %d %c %d\n", from[first_transition[states[i]]], label[first_transition[states[i]]], to[first_transition[states[i]]]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        free(states);
-    }
-    free(used);
-}
-
-
 void create_minimal_transducer_for_given_list(char* filename)
 {
     allocate_memory();
@@ -828,8 +756,7 @@ void create_minimal_transducer_for_given_list(char* filename)
     }
     reduce(current_word, 1);
 
-    test();
-   // print_transducer();
+    print_transducer();
     printf("NUMBER OF STATES %d\n", number_of_states);
     finalize_hash();
     free_memory();
