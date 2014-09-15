@@ -502,13 +502,13 @@ int find_equivalent(int state)
 char equal(int state1, int state2)
 {
     char equals = 0;
-    if (final[state1] == final[state2] && strcmp(final_state_output[state1], final_state_output[state2]) == 0)
+    if (final[state1] == final[state2] && (final[state1] != 1 || strcmp(final_state_output[state1], final_state_output[state2]) == 0))
         equals = 1;
 
     if (equals)
     {
         int transition1 = first_transition[state1], transition2 = first_transition[state2];
-        while (label[transition1] == label[transition2] && output_transition[transition1] == output_transition[transition2] && next_transition[transition1] != -1 && next_transition[transition2] != -1)
+        while (label[transition1] == label[transition2] && (transition1 == -1 || transition2 == -1 || strcmp(output_transition[transition1], output_transition[transition2]) == 0) && next_transition[transition1] != -1 && next_transition[transition2] != -1)
         {
             transition1 = next_transition[transition1];
             transition2 = next_transition[transition2];
