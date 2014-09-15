@@ -261,27 +261,8 @@ void set_transition(int from_state, char character, int to_state)
     to[position] = to_state;
     label[position] = character;
 
-    if (first_transition[from_state] == -1)
-        first_transition[from_state] = position;
-
-    int transition = first_transition[from_state];
-    int previous = transition;
-    while (label[transition] < character && transition != -1)
-    {
-        previous = transition;
-        transition = next_transition[transition];
-    }
-    if (previous != transition)
-    {
-        next_transition[previous] = position;
-        next_transition[position] = transition;
-    }
-    else
-    {
-        first_transition[from_state] = position;
-        next_transition[position] = transition;
-        next_transition[previous] = -1;
-    }
+    next_transition[position] = first_transition[from_state];
+    first_transition[from_state] = position;
     ++number_of_transitions;
 }
 
