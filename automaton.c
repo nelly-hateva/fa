@@ -502,7 +502,7 @@ int find_equivalent(int state)
 char equal(int state1, int state2)
 {
     char equals = 0;
-    if (final[state1] == final[state2] && strcmp(final_state_output[state1], final_state_output[state2]) == 0)
+    if (final[state1] == final[state2] && (final[state1] != 1 || strcmp(final_state_output[state1], final_state_output[state2]) == 0))
         equals = 1;
 
     if (equals)
