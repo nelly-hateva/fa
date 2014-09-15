@@ -557,7 +557,6 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
         char* new_output_label = malloc(output_label_length + strlen(final_state_output[state]) + 1);
         strcpy(new_output_label, output_label);
         strcat(new_output_label, final_state_output[state]);
-        new_output_label[output_label_length + strlen(final_state_output[state]) + 1] = '\0';
         fprintf(file, "%s %s\n", label, new_output_label);
         free(new_output_label);
     }
@@ -575,7 +574,6 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
             char* new_output_label = malloc(length);
             strcpy(new_output_label, output_label);
             strcat(new_output_label, output_transition_label(state, character));
-            new_output_label[length] = '\0';
 
             depth_first_search(vertex, new_label, new_output_label, file);
             free(new_label);

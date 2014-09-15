@@ -8,6 +8,7 @@
 # "s/@/ /g" replace @ with space
 # result line : JOINING  JHOY1NIH0NG
 sed -e "/^;;;/d" -e "s/ \{2,2\}/@/g" -e "s/ //g" -e "s/@/ /g" < data/cmu_dict > data/dict1
+LANG=C sort data/dict1 -o data/dict1
 
 # example line in rwb2c.txt : aaaratd,aaarated,aaarated
 # result line : aaaratd aaarated
