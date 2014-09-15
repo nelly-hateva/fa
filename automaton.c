@@ -13,9 +13,9 @@
 #define MAXIMUM_LINE_SIZE 128
 // wc -L file - the length of the longest line in the file
 
-#define FIRST_CHAR 33
-#define LAST_CHAR 126
-#define ALPHABET_SIZE 93
+#define FIRST_CHAR 33 // ! OR 97 a
+#define LAST_CHAR 126 // ~ OR 122 z
+#define ALPHABET_SIZE 94 // OR 26
 
 pair* dictionary;
 int memory_for_dictionary;
