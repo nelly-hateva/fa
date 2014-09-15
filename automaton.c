@@ -649,110 +649,114 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
     {
         previous_word = current_word;
         current_word = dictionary[j].first;
-        current_output = dictionary[j].second;
-        current_word_length = strlen(current_word);
 
-        path(current_word, prefix_states, &prefix_states_length);
-        reduce(previous_word, prefix_states_length);
-
-        for (i = 0; i <= current_word_length - prefix_states_length ; ++i)
+        if (strcmp(previous_word, current_word) != 0)
         {
-            suffix_states[i] = new_state();
-            add_state(suffix_states[i]);
-        }
+            current_output = dictionary[j].second;
+            current_word_length = strlen(current_word);
 
-        for (i = 0; i < prefix_states_length; ++i)
-            temporary_states[i] = prefix_states[i];
-        for (i = prefix_states_length; i <= current_word_length; ++i)
-            temporary_states[i] = suffix_states[i - prefix_states_length];
+            path(current_word, prefix_states, &prefix_states_length);
+            reduce(previous_word, prefix_states_length);
 
-        for (i = 0; i < current_word_length; ++i)
-        {
-            output_label(current_word, i, label_output);
-            longest_common_prefix(label_output, current_output, prefix);
-            output_labels_new_values[i] = strdup(prefix);
-            output_labels[i] = strdup(label_output);
-        }
-
-        final[suffix_states[current_word_length - prefix_states_length]] = 1;
-        for (i = prefix_states_length - 1; i < current_word_length; ++i)
-            set_transition(temporary_states[i], current_word[i], temporary_states[i + 1]);
-
-        for (i = 0; i < prefix_states_length - 1;  ++i)
-            prefix_states_output_labels_previous_values[i] = output_transition_label(temporary_states[i], current_word[i]);
-
-        set_output(temporary_states[0], current_word[0], output_labels_new_values[0]);
-        for (i = 1; i < prefix_states_length - 1; ++i)
-        {
-            string_remainder(output_labels_new_values[i - 1], output_labels_new_values[i], remainder);
-            set_output(temporary_states[i], current_word[i], remainder);
-        }
-
-        string_remainder(output_labels_new_values[prefix_states_length - 1], current_output, remainder);
-        set_output(temporary_states[prefix_states_length - 1], current_word[prefix_states_length - 1], remainder);
-
-        for (i = prefix_states_length; i < current_word_length; ++i)
-            set_output(temporary_states[i], current_word[i], "");
-
-        for (i = 0; i < prefix_states_length; ++i)
-            for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
+            for (i = 0; i <= current_word_length - prefix_states_length ; ++i)
             {
-                if (character != current_word[i] && transition(temporary_states[i], character) != -1)
+                suffix_states[i] = new_state();
+                add_state(suffix_states[i]);
+            }
+
+            for (i = 0; i < prefix_states_length; ++i)
+                temporary_states[i] = prefix_states[i];
+            for (i = prefix_states_length; i <= current_word_length; ++i)
+                temporary_states[i] = suffix_states[i - prefix_states_length];
+
+            for (i = 0; i < current_word_length; ++i)
+            {
+                output_label(current_word, i, label_output);
+                longest_common_prefix(label_output, current_output, prefix);
+                output_labels_new_values[i] = strdup(prefix);
+                output_labels[i] = strdup(label_output);
+            }
+
+            final[suffix_states[current_word_length - prefix_states_length]] = 1;
+            for (i = prefix_states_length - 1; i < current_word_length; ++i)
+                set_transition(temporary_states[i], current_word[i], temporary_states[i + 1]);
+
+            for (i = 0; i < prefix_states_length - 1;  ++i)
+                prefix_states_output_labels_previous_values[i] = output_transition_label(temporary_states[i], current_word[i]);
+
+            set_output(temporary_states[0], current_word[0], output_labels_new_values[0]);
+            for (i = 1; i < prefix_states_length - 1; ++i)
+            {
+                string_remainder(output_labels_new_values[i - 1], output_labels_new_values[i], remainder);
+                set_output(temporary_states[i], current_word[i], remainder);
+            }
+
+            string_remainder(output_labels_new_values[prefix_states_length - 1], current_output, remainder);
+            set_output(temporary_states[prefix_states_length - 1], current_word[prefix_states_length - 1], remainder);
+
+            for (i = prefix_states_length; i < current_word_length; ++i)
+                set_output(temporary_states[i], current_word[i], "");
+
+            for (i = 0; i < prefix_states_length; ++i)
+                for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
                 {
-                    label_output[0] = '\0'; label_output_length = 0;
-                    for (k = 0; k < i + 1; ++k)
+                    if (character != current_word[i] && transition(temporary_states[i], character) != -1)
                     {
-                        if (k == i)
+                        label_output[0] = '\0'; label_output_length = 0;
+                        for (k = 0; k < i + 1; ++k)
                         {
-                            current_output_label = output_transition_label(temporary_states[i], character);
-                            strcat(label_output, current_output_label);
-                            label_output_length += strlen(current_output_label);
+                            if (k == i)
+                            {
+                                current_output_label = output_transition_label(temporary_states[i], character);
+                                strcat(label_output, current_output_label);
+                                label_output_length += strlen(current_output_label);
+                            }
+                            else
+                            {
+                                strcat(label_output, prefix_states_output_labels_previous_values[k]);
+                                label_output_length += strlen(prefix_states_output_labels_previous_values[k]);
+                            }
                         }
+
+                        label_output[label_output_length] = '\0';
+                        if (i == 0)
+                            prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(label_output);
                         else
                         {
-                            strcat(label_output, prefix_states_output_labels_previous_values[k]);
-                            label_output_length += strlen(prefix_states_output_labels_previous_values[k]);
+                            string_remainder(output_labels_new_values[i - 1], label_output, remainder);
+                            prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(remainder);
                         }
                     }
+                }
 
-                    label_output[label_output_length] = '\0';
-                    if (i == 0)
-                        prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(label_output);
-                    else
+            for (i = 0; i < prefix_states_length; ++i)
+                for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
+                {
+                    if (prefix_states_remainders_previous_values[i][character - FIRST_CHAR] != NULL)
                     {
-                        string_remainder(output_labels_new_values[i - 1], label_output, remainder);
-                        prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(remainder);
+                        set_output(temporary_states[i], character, prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
+                        free(prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
+                        prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = NULL;
                     }
                 }
-            }
 
-        for (i = 0; i < prefix_states_length; ++i)
-            for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
-            {
-                if (prefix_states_remainders_previous_values[i][character - FIRST_CHAR] != NULL)
+            for (i = 0; i < prefix_states_length; ++i)
+                if (final[prefix_states[i]])
                 {
-                    set_output(temporary_states[i], character, prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
-                    free(prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
-                    prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = NULL;
+                    label_output[0] = '\0';
+                    if (i > 0)
+                        strcpy(label_output, output_labels[i-1]);
+                    strcat(label_output, final_state_output[prefix_states[i]]);
+                    if (i > 0)
+                    {
+                        string_remainder(output_labels_new_values[i - 1], label_output, remainder);
+                        final_state_output[prefix_states[i]] = strdup(remainder);
+                    }
+                    else
+                        final_state_output[prefix_states[i]] = strdup(label_output);
                 }
-            }
-
-        for (i = 0; i < prefix_states_length; ++i)
-            if (final[prefix_states[i]])
-            {
-                label_output[0] = '\0';
-                if (i > 0)
-                    strcpy(label_output, output_labels[i-1]);
-                strcat(label_output, final_state_output[prefix_states[i]]);
-                if (i > 0)
-                {
-                    string_remainder(output_labels_new_values[i - 1], label_output, remainder);
-                    final_state_output[prefix_states[i]] = strdup(remainder);
-                }
-                else
-                    final_state_output[prefix_states[i]] = strdup(label_output);
-            }
-        final_state_output[suffix_states[current_word_length - prefix_states_length]] = ""; 
+            final_state_output[suffix_states[current_word_length - prefix_states_length]] = "";
+        }
     }
     reduce(current_word, 1);
 
