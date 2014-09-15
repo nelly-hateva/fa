@@ -587,24 +587,24 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
 }
 
 
-void print_transducer()
+void print_transducer(char* filename)
 {
-    FILE *file = fopen("data/transducer", "w");
-    if (file == NULL)
+    FILE *file;
+    if ((file = fopen(filename, "w")) == NULL)
     {
-        printf("Error opening file!\n");
-        exit(1);
+        printf("cmt: %s: No such file or directory.\n", filename);
+        exit(EXIT_FAILURE);
     }
     depth_first_search(start, "", "", file);
     fclose(file);
 }
 
 
-void create_minimal_transducer_for_given_list(char* filename)
+void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
 {
     allocate_memory();
     initialize_hash();
-    read_dictionary(filename);
+    read_dictionary(inputfile);
 
     int i, j, k;
     int character;
@@ -756,7 +756,7 @@ void create_minimal_transducer_for_given_list(char* filename)
     }
     reduce(current_word, 1);
 
-    print_transducer();
+    print_transducer(outputfile);
     printf("NUMBER OF STATES %d\n", number_of_states);
     finalize_hash();
     free_memory();
