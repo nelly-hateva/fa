@@ -508,12 +508,12 @@ char equal(int state1, int state2)
     if (equals)
     {
         int transition1 = first_transition[state1], transition2 = first_transition[state2];
-        while (label[transition1] == label[transition2] && (transition1 == -1 || transition2 == -1 || strcmp(output_transition[transition1], output_transition[transition2]) == 0) && next_transition[transition1] != -1 && next_transition[transition2] != -1)
+        while (label[transition1] == label[transition2] && to[transition1] == to[transition2] && (transition1 == -1 || transition2 == -1 || strcmp(output_transition[transition1], output_transition[transition2]) == 0) && next_transition[transition1] != -1 && next_transition[transition2] != -1)
         {
             transition1 = next_transition[transition1];
             transition2 = next_transition[transition2];
         }
-        if (next_transition[transition2] != next_transition[transition1] || label[transition1] != label[transition2] || to[transition1] != to[transition2] || strcmp(output_transition[transition1], output_transition[transition2]) != 0)
+        if (next_transition[transition1] != next_transition[transition2] || label[transition1] != label[transition2] || to[transition1] != to[transition2] || strcmp(output_transition[transition1], output_transition[transition2]) != 0)
             return 0;
     }
     return equals;
