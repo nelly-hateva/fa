@@ -495,7 +495,8 @@ int find_equivalent(int state)
 char equivalent(int state1, int state2)
 {
     char equivalent = 0;
-    if (final[state1] == final[state2] && (final[state1] != 1 || strcmp(final_state_output[state1], final_state_output[state2]) == 0))
+    if (final[state1] == final[state2] &&
+        (final[state1] != 1 || strcmp(final_state_output[state1], final_state_output[state2]) == 0))
         equivalent = 1;
 
     if (equivalent)
@@ -512,7 +513,8 @@ char equivalent(int state1, int state2)
         if (transition1 != transition2 ||
             (transition1 != -1 && transition2 != -1 && label[transition1] != label[transition2]) ||
             (transition1 != -1 && transition2 != -1 && to[transition1] != to[transition2]) ||
-            (transition1 != -1 && transition2 != -1 && strcmp(output_transition[transition1], output_transition[transition2]) != 0))
+            (transition1 != -1 && transition2 != -1 &&
+                strcmp(output_transition[transition1], output_transition[transition2]) != 0))
             return 0;
     }
     return equivalent;
