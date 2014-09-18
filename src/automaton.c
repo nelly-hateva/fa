@@ -282,6 +282,19 @@ void set_output(int state, char character, char* string)
 }
 
 
+void remove_transition(int transition)
+{
+    from[transition] = -1;
+    to[transition] = -1;
+    label[transition] = -1;
+    next_transition[transition] = -1;
+
+    ++free_transition;
+    free_transitions_numbers[free_transition] = transition;
+    --number_of_transitions;
+}
+
+
 void delete_transition(int from_state, char character)
 {
     int transition = first_transition[from_state];
@@ -309,27 +322,7 @@ void delete_transition(int from_state, char character)
         next_transition[previous_transition] = next_transition[outgoing_transition];
     }
 
-    from[transition] = -1;
-    to[transition] = -1;
-    label[transition] = -1;
-    next_transition[transition] = -1;
-
-    ++free_transition;
-    free_transitions_numbers[free_transition] = transition;
-    --number_of_transitions;
-}
-
-
-void remove_transition(int transition)
-{
-    from[transition] = -1;
-    to[transition] = -1;
-    label[transition] = -1;
-    next_transition[transition] = -1;
-
-    ++free_transition;
-    free_transitions_numbers[free_transition] = transition;
-    --number_of_transitions;
+    remove_transition(transition);
 }
 
 
