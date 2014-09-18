@@ -499,24 +499,30 @@ int find_equivalent(int state)
 }
 
 
-char equal(int state1, int state2)
+char equivalent(int state1, int state2)
 {
-    char equals = 0;
+    char equivalent = 0;
     if (final[state1] == final[state2] && (final[state1] != 1 || strcmp(final_state_output[state1], final_state_output[state2]) == 0))
-        equals = 1;
+        equivalent = 1;
 
-    if (equals)
+    if (equivalent)
     {
         int transition1 = first_transition[state1], transition2 = first_transition[state2];
-        while (label[transition1] == label[transition2] && to[transition1] == to[transition2] && (transition1 == -1 || transition2 == -1 || strcmp(output_transition[transition1], output_transition[transition2]) == 0) && next_transition[transition1] != -1 && next_transition[transition2] != -1)
+        while(transition1 != -1 && transition2 != -1 &&
+              label[transition1] == label[transition2] &&
+              to[transition1] == to[transition2] &&
+              strcmp(output_transition[transition1], output_transition[transition2]) == 0)
         {
             transition1 = next_transition[transition1];
             transition2 = next_transition[transition2];
         }
-        if (next_transition[transition1] != next_transition[transition2] || label[transition1] != label[transition2] || to[transition1] != to[transition2] || strcmp(output_transition[transition1], output_transition[transition2]) != 0)
+        if (transition1 != transition2 ||
+            (transition1 != -1 && transition2 != -1 && label[transition1] != label[transition2]) ||
+            (transition1 != -1 && transition2 != -1 && to[transition1] != to[transition2]) ||
+            (transition1 != -1 && transition2 != -1 && strcmp(output_transition[transition1], output_transition[transition2]) != 0))
             return 0;
     }
-    return equals;
+    return equivalent;
 }
 
 

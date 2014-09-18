@@ -5,7 +5,7 @@
 #define INITIAL_HASH_CAPACITY 2048
 
 extern int hash_code(int);
-extern char equal(int n, int m);
+extern char equivalent(int n, int m);
 
 int* table;
 int* next;
@@ -133,7 +133,7 @@ int search(int value, int key)
 
     while (j!= -1)
     {
-        if (j != value && equal(value, j))
+        if (j != value && equivalent(value, j))
             return j;
         j = next[j];
     }
