@@ -580,7 +580,10 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
     char* output_labels_new_values[MAXIMUM_WORD_SIZE];
     char* output_labels[MAXIMUM_WORD_SIZE];
     for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+    {
         output_labels[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
+        output_labels_new_values[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
+    }
 
     char label_output[MAXIMUM_WORD_SIZE];
     int label_output_length;
@@ -628,7 +631,7 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
         for (i = 0; i < prefix_states_length; ++i)
         {
             longest_common_prefix(output_labels[i], current_output, prefix);
-            output_labels_new_values[i] = strdup(prefix);
+            strcpy(output_labels_new_values[i], prefix);
         }
 
         final[temporary_states[current_word_length]] = 1;
@@ -714,7 +717,10 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
     printf("NUMBER OF STATES %d\n", number_of_states);
 
     for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+    {
         free(output_labels[i]);
+        free(output_labels_new_values[i]);
+    }
     finalize_hash();
     free_memory();
 }
