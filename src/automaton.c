@@ -408,30 +408,24 @@ char* output_transition_label(int state, char character)
 }
 
 
-void output_label(char* word, int position, char* result)
+void prefix_states_output_labels(char* word, int* temporary_states, char** output_transition_labels, char** output_labels , int length)
 {
     int i;
-    int state1 = start, state2;
-    int result_length = 0;
-    char* output;
-
-    for (i = 0; i <= position; ++i)
+    for (i = 0; i < length;  ++i)
     {
-        state2 = transition(state1, word[i]);
-        if (state2 != -1)
+        output_transition_labels[i] = output_transition_label(temporary_states[i], word[i]);
+        if (i > 0)
         {
-            output = output_transition_label(state1, word[i]);
-            result_length += strlen(output);
-            if (i == 0)
-                strcpy(result, output);
-            else
-                strcat(result, output);
-            state1 = state2;
+            strcpy(output_labels[i], output_labels[i - 1]);
+            strcat(output_labels[i], output_transition_labels[i]);
+            output_labels[i][strlen(output_labels[i - 1]) + strlen(output_transition_labels[i])] = '\0';
         }
         else
-            break;
+        {
+            strcpy(output_labels[i], output_transition_labels[i]);
+            output_labels[i][strlen(output_transition_labels[i])] = '\0';
+        }
     }
-    result[result_length] = '\0';
 }
 
 
@@ -585,6 +579,8 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
 
     char* output_labels_new_values[MAXIMUM_WORD_SIZE];
     char* output_labels[MAXIMUM_WORD_SIZE];
+    for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+        output_labels[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
 
     char label_output[MAXIMUM_WORD_SIZE];
     int label_output_length;
@@ -628,20 +624,16 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
             add_state(temporary_states[i]);
         }
 
-        for (i = 0; i < current_word_length; ++i)
+        prefix_states_output_labels(current_word, temporary_states, prefix_states_output_labels_previous_values, output_labels, prefix_states_length);
+        for (i = 0; i < prefix_states_length; ++i)
         {
-            output_label(current_word, i, label_output);
-            longest_common_prefix(label_output, current_output, prefix);
+            longest_common_prefix(output_labels[i], current_output, prefix);
             output_labels_new_values[i] = strdup(prefix);
-            output_labels[i] = strdup(label_output);
         }
 
         final[temporary_states[current_word_length]] = 1;
         for (i = prefix_states_length - 1; i < current_word_length; ++i)
             set_transition(temporary_states[i], current_word[i], temporary_states[i + 1]);
-
-        for (i = 0; i < prefix_states_length - 1;  ++i)
-            prefix_states_output_labels_previous_values[i] = output_transition_label(temporary_states[i], current_word[i]);
 
         set_output(temporary_states[0], current_word[0], output_labels_new_values[0]);
         for (i = 1; i < prefix_states_length - 1; ++i)
@@ -704,7 +696,7 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
             {
                 label_output[0] = '\0';
                 if (i > 0)
-                    strcpy(label_output, output_labels[i-1]);
+                    strcpy(label_output, output_labels[i - 1]);
                 strcat(label_output, final_state_output[temporary_states[i]]);
                 if (i > 0)
                 {
@@ -720,6 +712,9 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
 
     print_transducer(outputfile);
     printf("NUMBER OF STATES %d\n", number_of_states);
+
+    for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+        free(output_labels[i]);
     finalize_hash();
     free_memory();
 }
