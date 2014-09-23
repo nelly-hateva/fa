@@ -1,8 +1,7 @@
-#include <stdio.h>
 #include <stdlib.h>
 
-#define INITIAL_HASH_LENGTH 1024
-#define INITIAL_HASH_CAPACITY 2048
+#define INITIAL_HASH_LENGTH 4096
+#define INITIAL_HASH_CAPACITY 8192
 
 extern int hash_code(int);
 extern char equivalent(int n, int m);
@@ -34,9 +33,8 @@ void initialize_hash()
 }
 
 
-void finalize_hash()
+void free_hash()
 {
-    printf("HASH SIZE IS %d\n", hash_size);
     free(table);
     free(next);
 }

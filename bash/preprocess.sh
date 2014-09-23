@@ -52,3 +52,6 @@ cat data/dict3 >> data/dict7
 LANG=C sort data/dict7 -o data/dict7
 bin/clean data/dict7 data/temp
 mv data/temp data/dict7
+
+# Choose 10 random words from file to delete
+# sort -R data/dict1 | head -10 | sed "s/\([^ ]*\) [^ ]*/\1/" > data/dict1-delete

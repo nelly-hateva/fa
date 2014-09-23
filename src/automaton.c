@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "pair.h"
 #include "hash.h"
 
-#define INITIAL_DICTIONARY_SIZE 16384
 #define INITIAL_STATES_NUMBER 8192
 #define INITIAL_TRANSITIONS_NUMBER 2048
 #define FREE_NUMBERS_SIZE 64
@@ -16,10 +14,6 @@
 #define FIRST_CHAR 33 // ! OR 97 a
 #define LAST_CHAR 126 // ~ OR 122 z
 #define ALPHABET_SIZE 94 // OR 26
-
-pair* dictionary;
-int memory_for_dictionary;
-int dictionary_size;
 
 int* free_states_numbers;
 int* free_transitions_numbers;
@@ -42,6 +36,20 @@ int memory_for_transitions;
 int number_of_states;
 int number_of_transitions;
 
+int temporary_states[MAXIMUM_WORD_SIZE];
+int prefix_states_length;
+
+char* current_output_label;
+char* output_labels_new_values[MAXIMUM_WORD_SIZE];
+char* output_labels[MAXIMUM_WORD_SIZE];
+
+
+char label_output[MAXIMUM_WORD_SIZE];
+int label_output_length;
+char prefix[MAXIMUM_WORD_SIZE];
+char rest[MAXIMUM_WORD_SIZE];
+char* prefix_states_remainders_previous_values[MAXIMUM_WORD_SIZE][ALPHABET_SIZE] = {{NULL}};
+char* prefix_states_output_labels_previous_values[MAXIMUM_WORD_SIZE] = {NULL};
 
 // COMMON STRING OPERATIONS
 
@@ -73,7 +81,6 @@ void string_remainder(char* first_word, char* second_word, char* remainder)
 
 void allocate_memory()
 {
-    dictionary_size = 0;
     number_of_states = 0;
     number_of_transitions = 0;
 
@@ -82,9 +89,6 @@ void allocate_memory()
 
     memory_for_states = INITIAL_STATES_NUMBER;
     memory_for_transitions = INITIAL_TRANSITIONS_NUMBER;
-    memory_for_dictionary = INITIAL_DICTIONARY_SIZE;
-
-    dictionary = (pair*) malloc(memory_for_dictionary * sizeof(pair));
 
     first_transition = (int*) malloc(memory_for_states * sizeof(int));
     final = (char*) malloc(memory_for_states * sizeof(char));
@@ -107,7 +111,6 @@ void allocate_memory()
 
 void free_memory()
 {
-    free(dictionary);
     free(first_transition);
     free(final);
     free(next_transition);
@@ -150,45 +153,6 @@ void reallocate_memory_for_transitions()
         for (i = previous_value_memory_for_transitions; i < memory_for_transitions; ++i)
             next_transition[i] = -1;
     }
-}
-
-
-void reallocate_memory_for_dictionary()
-{
-    if (dictionary_size >= memory_for_dictionary)
-    {
-        memory_for_dictionary *= 2;
-        dictionary = (pair*) realloc(dictionary, memory_for_dictionary * sizeof(pair));
-    }
-}
-
-
-// DICTIONARY OPERATIONS
-
-void read_dictionary(char* filename)
-{
-    FILE *file;
-    if ((file = fopen(filename, "r")) == NULL)
-    {
-        printf("cmt: %s: No such file or directory.\n", filename);
-        exit(EXIT_FAILURE);
-    }
-    char line[MAXIMUM_LINE_SIZE]; const char s[2] = " ";
-    char* token; char* first; char* second;
-
-    while (fgets(line, sizeof line, file) != NULL)
-    {
-        reallocate_memory_for_dictionary();
-        line[strlen(line) - 1] = '\0';
-        token = strtok(line, s);
-        first = token;
-        token = strtok(NULL, s);
-        second = token;
-        pair entry = {.first = strdup(first), .second = strdup(second)};
-        dictionary[dictionary_size] = entry;
-        ++dictionary_size;
-    }
-    fclose(file);
 }
 
 
@@ -351,50 +315,6 @@ void path(char* word, int* path_states, int* path_states_length)
 }
 
 
-void delete_word(char* word)
-{
-    int current_state;
-    int transition;
-    int outgoing_transitions;
-    int path_states[MAXIMUM_WORD_SIZE];
-    int path_states_size;
-    int number_of_outgoing_transitions[MAXIMUM_WORD_SIZE];
-
-    path(word, path_states, &path_states_size);
-
-    int j = 1;
-    current_state = path_states[path_states_size - j];
-    final[current_state] = -1;
-    while (j <= path_states_size)
-    {
-        current_state = path_states[path_states_size - j];
-        outgoing_transitions = 0;
-        transition = first_transition[current_state];
-        while (transition != -1)
-        {
-            transition = next_transition[transition];
-            ++outgoing_transitions;
-            if (j == 1 && outgoing_transitions > 1)
-                break;
-            else if (outgoing_transitions > 2)
-                break;
-        }
-        number_of_outgoing_transitions[path_states_size - j] = outgoing_transitions;
-        ++j;
-    }
-
-    for (j = path_states_size - 1; j >= 0; --j)
-    {
-        if (j == path_states_size - 1 && number_of_outgoing_transitions[j] == 0)
-            delete_state(path_states[j]);
-        else if (number_of_outgoing_transitions[j] <= 1)
-            delete_state(path_states[j]);
-        else
-            break;
-    }
-}
-
-
 char* output_transition_label(int state, char character)
 {
     int transition = first_transition[state];
@@ -512,6 +432,108 @@ void reduce(char* word, int length)
 }
 
 
+void clone(char* word, int* path_states, int* path_length, int i)
+{
+    if (i >= *path_length)
+        return;
+    else
+    {
+        int copy_state = new_state();
+        int previous_state = path_states[i - 1];
+        int current_state = path_states[i];
+
+        final[copy_state] = final[current_state];
+        delete_transition(previous_state, word[i - 1]);
+        set_transition(previous_state, word[i - 1], copy_state);
+
+        int transition = first_transition[current_state];
+        while (transition != -1)
+        {
+            set_transition(copy_state, label[transition], to[transition]);
+            transition = next_transition[transition];
+        }
+        path_states[i] = copy_state;
+        clone(word, path_states, path_length, i + 1);
+    }
+}
+
+
+void extend(char* word, int* path_states, int* path_length, int* position)
+{
+    path(word, path_states, path_length);
+    int i, j = 1; int minimum = -1;
+    int incoming_transitions_count, current_state;
+    while (j < *path_length && minimum == -1)
+    {
+        current_state = path_states[j];
+        incoming_transitions_count = 0;
+        for (i = 0; i < number_of_transitions; ++i)
+        {
+            if (to[i] == current_state)
+                ++incoming_transitions_count;
+            if (incoming_transitions_count > 1)
+            {
+                minimum = j;
+                break;
+            }
+        }
+        ++j;
+    }
+    *position = minimum;
+    if (minimum != -1)
+    {
+        delete(path_states[minimum - 1], hash_code(path_states[minimum - 1]));
+        return clone(word, path_states, path_length, minimum);
+    }
+    return;
+}
+
+
+void delete_word(char* word)
+{
+    int path_length;
+    int path_states[MAXIMUM_WORD_SIZE];
+    int position;
+    extend(word, path_states, &path_length, &position);
+
+    int last_deleted = -1;
+    if (final[path_states[path_length - 1]] == 1)
+    {
+        final[path_states[path_length - 1]] = 0;
+        int j, outgoing_transitions, transition;
+        for (j = path_length - 1; j > 0; --j)
+        {
+            outgoing_transitions = 0;
+            transition = first_transition[path_states[j]];
+            while (transition != -1)
+            {
+                transition = next_transition[transition];
+                ++outgoing_transitions;
+                if ((j == path_length - 1 && outgoing_transitions > 0) || (j != path_length - 1 && outgoing_transitions > 2))
+                    break;
+            }
+            if (j == path_length - 1 && outgoing_transitions > 0)
+                break;
+            else if (j == path_length - 1 && outgoing_transitions == 0)
+            {
+                delete_state(path_states[j]);
+                last_deleted = j;
+            }
+            else if (outgoing_transitions <= 1 && j != path_length - 1)
+            {
+                delete_state(path_states[j]);
+                last_deleted = j;
+            }
+            else
+                break;
+        }
+        if (last_deleted != -1)
+            delete_transition(path_states[last_deleted - 1], word[last_deleted - 1]);
+        reduce(word, position);
+    }
+}
+
+
 void depth_first_search(int state, char* label, char* output_label, FILE* file)
 {
     char character;
@@ -549,51 +571,202 @@ void depth_first_search(int state, char* label, char* output_label, FILE* file)
 }
 
 
-void print_transducer(char* filename)
+void print_transducer(char* filename, char suffix_filename)
 {
+    char* result_filename = malloc(strlen(filename) + 2);
+    strcpy(result_filename, filename);
+    result_filename[strlen(filename)] = suffix_filename;
+    result_filename[strlen(filename) + 1] = '\0';
+
     FILE *file;
-    if ((file = fopen(filename, "w")) == NULL)
+    if ((file = fopen(result_filename, "w")) == NULL)
     {
-        printf("cmt: %s: No such file or directory.\n", filename);
+        printf("cmt: Can't open file %s\n", result_filename);
         exit(EXIT_FAILURE);
     }
     depth_first_search(start, "", "", file);
     fclose(file);
+
+    printf("%c NUMBER OF STATES %d\n", suffix_filename, number_of_states);
+    printf("%c NUMBER OF TRANSITIONS %d\n", suffix_filename, number_of_transitions);
 }
 
 
-void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
+void add_word(char* word, char* output)
 {
-    allocate_memory();
-    initialize_hash();
-    read_dictionary(inputfile);
+    int i, k;
+    char character;
+    int word_length = strlen(word);
 
-    int i, j, k;
-    int character;
-    char *current_word, *current_output, *previous_word;
-    char* current_output_label;
-    int current_word_length;
-
-    int temporary_states[MAXIMUM_WORD_SIZE];
-    int prefix_states_length;
-
-    char* output_labels_new_values[MAXIMUM_WORD_SIZE];
-    char* output_labels[MAXIMUM_WORD_SIZE];
-    for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+    for (i = prefix_states_length; i <= word_length; ++i)
     {
-        output_labels[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
-        output_labels_new_values[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
+        temporary_states[i] = new_state();
+        add_state(temporary_states[i]);
     }
 
-    char label_output[MAXIMUM_WORD_SIZE];
-    int label_output_length;
-    char prefix[MAXIMUM_WORD_SIZE];
-    char remainder[MAXIMUM_WORD_SIZE];
-    char* prefix_states_remainders_previous_values[MAXIMUM_WORD_SIZE][ALPHABET_SIZE] = {{NULL}};
-    char* prefix_states_output_labels_previous_values[MAXIMUM_WORD_SIZE] = {NULL};
+    prefix_states_output_labels(word, temporary_states, prefix_states_output_labels_previous_values, output_labels, prefix_states_length);
+    for (i = 0; i < prefix_states_length; ++i)
+    {
+        longest_common_prefix(output_labels[i], output, prefix);
+        strcpy(output_labels_new_values[i], prefix);
+    }
 
-    current_word = dictionary[0].first;
-    current_output = dictionary[0].second;
+    final[temporary_states[word_length]] = 1;
+    for (i = prefix_states_length - 1; i < word_length; ++i)
+        set_transition(temporary_states[i], word[i], temporary_states[i + 1]);
+
+    set_output(temporary_states[0], word[0], output_labels_new_values[0]);
+    for (i = 1; i < prefix_states_length - 1; ++i)
+    {
+        string_remainder(output_labels_new_values[i - 1], output_labels_new_values[i], rest);
+        set_output(temporary_states[i], word[i], rest);
+    }
+
+    string_remainder(output_labels_new_values[prefix_states_length - 1], output, rest);
+    set_output(temporary_states[prefix_states_length - 1], word[prefix_states_length - 1], rest);
+
+    for (i = prefix_states_length; i < word_length; ++i)
+        set_output(temporary_states[i], word[i], "");
+
+    for (i = 0; i < prefix_states_length; ++i)
+        for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
+        {
+            if (character != word[i] && transition(temporary_states[i], character) != -1)
+            {
+                label_output[0] = '\0'; label_output_length = 0;
+                for (k = 0; k < i + 1; ++k)
+                {
+                    if (k == i)
+                    {
+                        current_output_label = output_transition_label(temporary_states[i], character);
+                        strcat(label_output, current_output_label);
+                        label_output_length += strlen(current_output_label);
+                    }
+                    else
+                    {
+                        strcat(label_output, prefix_states_output_labels_previous_values[k]);
+                        label_output_length += strlen(prefix_states_output_labels_previous_values[k]);
+                    }
+                }
+
+                label_output[label_output_length] = '\0';
+                if (i == 0)
+                    prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(label_output);
+                else
+                {
+                    string_remainder(output_labels_new_values[i - 1], label_output, rest);
+                    prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(rest);
+                }
+            }
+        }
+
+    for (i = 0; i < prefix_states_length; ++i)
+        for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
+        {
+            if (prefix_states_remainders_previous_values[i][character - FIRST_CHAR] != NULL)
+            {
+                set_output(temporary_states[i], character, prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
+                free(prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
+                prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = NULL;
+            }
+        }
+
+    for (i = 0; i < prefix_states_length; ++i)
+        if (final[temporary_states[i]])
+        {
+            label_output[0] = '\0';
+            if (i > 0)
+                strcpy(label_output, output_labels[i - 1]);
+            strcat(label_output, final_state_output[temporary_states[i]]);
+            if (i > 0)
+            {
+                string_remainder(output_labels_new_values[i - 1], label_output, rest);
+                final_state_output[temporary_states[i]] = strdup(rest);
+            }
+            else
+                final_state_output[temporary_states[i]] = strdup(label_output);
+        }
+    final_state_output[temporary_states[word_length]] = "";
+}
+
+
+void add_words(char* filename)
+{
+    FILE *file;
+    if ((file = fopen(filename, "r")) == NULL)
+    {
+        printf("cmt: %s: No such file or directory.\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    char line[MAXIMUM_LINE_SIZE]; const char s[2] = " ";
+    char* token; char* first; char* second;
+
+    int path_length;
+    int path_states[MAXIMUM_WORD_SIZE];
+    int position;
+    while (fgets(line, sizeof line, file) != NULL)
+    {
+        line[strlen(line) - 1] = '\0';
+        token = strtok(line, s);
+        first = token;
+        token = strtok(NULL, s);
+        second = token;
+            
+    extend(first, path_states, &path_length, &position);
+        add_word(first, second);
+    }
+
+    fclose(file);
+    print_transducer(filename, 'a');
+}
+
+
+void delete_words(char* filename)
+{
+    FILE *file;
+    if ((file = fopen(filename, "r")) == NULL)
+    {
+        printf("cmt: %s: No such file or directory.\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    char line[MAXIMUM_LINE_SIZE];
+    while (fgets(line, sizeof line, file) != NULL)
+    {
+        line[strlen(line) - 1] = '\0';
+        delete_word(line);
+    }
+
+    fclose(file);
+    print_transducer(filename, 'd');
+}
+
+
+void create_minimal_transducer_for_sorted_list(char* filename)
+{
+    FILE *file;
+    if ((file = fopen(filename, "r")) == NULL)
+    {
+        printf("cmt: %s: No such file or directory.\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    const char s[2] = " ";
+    char line[MAXIMUM_LINE_SIZE];
+    char* token;
+
+    int i;
+    int current_word_length;
+    char previous_word[MAXIMUM_WORD_SIZE];
+    char *current_word, *current_output;
+
+    fgets(line, sizeof line, file);
+    line[strlen(line) - 1] = '\0';
+    token = strtok(line, s);
+    current_word = token;
+    token = strtok(NULL, s);
+    current_output = token;
     current_word_length = strlen(current_word);
 
     for (i = 0; i <= current_word_length; ++i)
@@ -609,118 +782,65 @@ void create_minimal_transducer_for_given_list(char* inputfile, char* outputfile)
     set_output(0, current_word[0], current_output);
     for (i = 1; i < current_word_length; ++i)
         set_output(i, current_word[i], "");
+    strcpy(previous_word, current_word);
 
-    for (j = 1; j < dictionary_size; ++j)
+    while (fgets(line, sizeof line, file) != NULL)
     {
-        previous_word = current_word;
-        current_word = dictionary[j].first;
-
-        current_output = dictionary[j].second;
+        
+        line[strlen(line) - 1] = '\0';
+        token = strtok(line, s);
+        current_word = token;
+        token = strtok(NULL, s);
+        current_output = token;
         current_word_length = strlen(current_word);
-
         path(current_word, temporary_states, &prefix_states_length);
         reduce(previous_word, prefix_states_length);
-
-        for (i = prefix_states_length; i <= current_word_length; ++i)
-        {
-            temporary_states[i] = new_state();
-            add_state(temporary_states[i]);
-        }
-
-        prefix_states_output_labels(current_word, temporary_states, prefix_states_output_labels_previous_values, output_labels, prefix_states_length);
-        for (i = 0; i < prefix_states_length; ++i)
-        {
-            longest_common_prefix(output_labels[i], current_output, prefix);
-            strcpy(output_labels_new_values[i], prefix);
-        }
-
-        final[temporary_states[current_word_length]] = 1;
-        for (i = prefix_states_length - 1; i < current_word_length; ++i)
-            set_transition(temporary_states[i], current_word[i], temporary_states[i + 1]);
-
-        set_output(temporary_states[0], current_word[0], output_labels_new_values[0]);
-        for (i = 1; i < prefix_states_length - 1; ++i)
-        {
-            string_remainder(output_labels_new_values[i - 1], output_labels_new_values[i], remainder);
-            set_output(temporary_states[i], current_word[i], remainder);
-        }
-
-        string_remainder(output_labels_new_values[prefix_states_length - 1], current_output, remainder);
-        set_output(temporary_states[prefix_states_length - 1], current_word[prefix_states_length - 1], remainder);
-
-        for (i = prefix_states_length; i < current_word_length; ++i)
-            set_output(temporary_states[i], current_word[i], "");
-
-        for (i = 0; i < prefix_states_length; ++i)
-            for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
-            {
-                if (character != current_word[i] && transition(temporary_states[i], character) != -1)
-                {
-                    label_output[0] = '\0'; label_output_length = 0;
-                    for (k = 0; k < i + 1; ++k)
-                    {
-                        if (k == i)
-                        {
-                            current_output_label = output_transition_label(temporary_states[i], character);
-                            strcat(label_output, current_output_label);
-                            label_output_length += strlen(current_output_label);
-                        }
-                        else
-                        {
-                            strcat(label_output, prefix_states_output_labels_previous_values[k]);
-                            label_output_length += strlen(prefix_states_output_labels_previous_values[k]);
-                        }
-                    }
-
-                    label_output[label_output_length] = '\0';
-                    if (i == 0)
-                        prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(label_output);
-                    else
-                    {
-                        string_remainder(output_labels_new_values[i - 1], label_output, remainder);
-                        prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = strdup(remainder);
-                    }
-                }
-            }
-
-        for (i = 0; i < prefix_states_length; ++i)
-            for (character = FIRST_CHAR; character <= LAST_CHAR; ++character)
-            {
-                if (prefix_states_remainders_previous_values[i][character - FIRST_CHAR] != NULL)
-                {
-                    set_output(temporary_states[i], character, prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
-                    free(prefix_states_remainders_previous_values[i][character - FIRST_CHAR]);
-                    prefix_states_remainders_previous_values[i][character - FIRST_CHAR] = NULL;
-                }
-            }
-
-        for (i = 0; i < prefix_states_length; ++i)
-            if (final[temporary_states[i]])
-            {
-                label_output[0] = '\0';
-                if (i > 0)
-                    strcpy(label_output, output_labels[i - 1]);
-                strcat(label_output, final_state_output[temporary_states[i]]);
-                if (i > 0)
-                {
-                    string_remainder(output_labels_new_values[i - 1], label_output, remainder);
-                    final_state_output[temporary_states[i]] = strdup(remainder);
-                }
-                else
-                    final_state_output[temporary_states[i]] = strdup(label_output);
-            }
-        final_state_output[temporary_states[current_word_length]] = "";
+        add_word(current_word, current_output);
+        strcpy(previous_word, current_word);
     }
     reduce(current_word, 0);
 
-    print_transducer(outputfile);
-    printf("NUMBER OF STATES %d\n", number_of_states);
+    fclose(file);
+    print_transducer(filename, 'r');
+}
 
-    for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+
+void dispatch(int argc, char* argv[])
+{
+    if (argc < 2)
     {
-        free(output_labels[i]);
-        free(output_labels_new_values[i]);
+        printf("cmt: No file name given\n");
+        exit(EXIT_FAILURE);
     }
-    finalize_hash();
-    free_memory();
+    else
+    {
+        allocate_memory();
+        initialize_hash();
+
+        int i;
+        for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+        {
+            output_labels[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
+            output_labels_new_values[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
+        }
+
+        create_minimal_transducer_for_sorted_list(argv[1]);
+        if (argc >= 4 && strcmp(argv[2], "--d"))
+            delete_words(argv[3]);
+        else if (argc >= 6 && strcmp(argv[4], "--d"))
+            delete_words(argv[5]);
+        if (argc >= 4 && strcmp(argv[2], "--a"))
+            add_words(argv[3]);
+        else if (argc >= 6 && strcmp(argv[4], "--a"))
+            add_words(argv[5]);
+
+        for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+        {
+            free(output_labels[i]);
+            free(output_labels_new_values[i]);
+        }
+        free_hash();
+        free_memory();
+    }
+
 }

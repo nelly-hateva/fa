@@ -4,7 +4,7 @@
 extern int hash_length;
 
 void initialize_hash();
-void finalize_hash();
+void free_hash();
 void insert(int value, int key);
 void delete(int value, int key);
 int find(int value, int key);
