@@ -438,18 +438,26 @@ void clone(char* word, int* path_states, int* path_length, int i)
         return;
     else
     {
+        char* output_label;
         int copy_state = new_state();
         int previous_state = path_states[i - 1];
         int current_state = path_states[i];
 
         final[copy_state] = final[current_state];
+        if (final[current_state] == 1)
+            final_state_output[copy_state] = strdup(final_state_output[current_state]);
+
+        output_label = output_transition_label(previous_state, word[i - 1]);
         delete_transition(previous_state, word[i - 1]);
         set_transition(previous_state, word[i - 1], copy_state);
+        set_output(previous_state, word[i - 1], output_label);
 
         int transition = first_transition[current_state];
         while (transition != -1)
         {
+            output_label = output_transition_label(current_state, label[transition]);
             set_transition(copy_state, label[transition], to[transition]);
+            set_output(copy_state, label[transition], output_label);
             transition = next_transition[transition];
         }
         path_states[i] = copy_state;
@@ -491,44 +499,44 @@ void extend(char* word, int* path_states, int* path_length, int* position)
 
 void delete_word(char* word)
 {
-    int path_length;
-    int path_states[MAXIMUM_WORD_SIZE];
     int position;
-    extend(word, path_states, &path_length, &position);
+    extend(word, temporary_states, &prefix_states_length, &position);
 
     int last_deleted = -1;
-    if (final[path_states[path_length - 1]] == 1)
+    if (final[temporary_states[prefix_states_length - 1]] == 1 && prefix_states_length == strlen(word) + 1)
     {
-        final[path_states[path_length - 1]] = 0;
+        final[temporary_states[prefix_states_length - 1]] = 0;
         int j, outgoing_transitions, transition;
-        for (j = path_length - 1; j > 0; --j)
+        for (j = prefix_states_length - 1; j > 0; --j)
         {
+            printf("del %s %d %d\n", word,j,temporary_states[j] );
             outgoing_transitions = 0;
-            transition = first_transition[path_states[j]];
+            transition = first_transition[temporary_states[j]];
             while (transition != -1)
             {
                 transition = next_transition[transition];
                 ++outgoing_transitions;
-                if ((j == path_length - 1 && outgoing_transitions > 0) || (j != path_length - 1 && outgoing_transitions > 2))
+                if ((j == prefix_states_length - 1 && outgoing_transitions > 0) || (j != prefix_states_length - 1 && outgoing_transitions > 2))
                     break;
             }
-            if (j == path_length - 1 && outgoing_transitions > 0)
+            printf("del %s %d %d\n", word,j,temporary_states[j] );
+            if (j == prefix_states_length - 1 && outgoing_transitions > 0)
                 break;
-            else if (j == path_length - 1 && outgoing_transitions == 0)
+            else if (j == prefix_states_length - 1 && outgoing_transitions == 0)
             {
-                delete_state(path_states[j]);
+                delete_state(temporary_states[j]);
                 last_deleted = j;
             }
-            else if (outgoing_transitions <= 1 && j != path_length - 1)
+            else if (outgoing_transitions <= 1 && j != prefix_states_length - 1)
             {
-                delete_state(path_states[j]);
+                delete_state(temporary_states[j]);
                 last_deleted = j;
             }
             else
                 break;
         }
         if (last_deleted != -1)
-            delete_transition(path_states[last_deleted - 1], word[last_deleted - 1]);
+            delete_transition(temporary_states[last_deleted - 1], word[last_deleted - 1]);
         reduce(word, position);
     }
 }
@@ -597,7 +605,6 @@ void add_word(char* word, char* output)
     int i, k;
     char character;
     int word_length = strlen(word);
-
     for (i = prefix_states_length; i <= word_length; ++i)
     {
         temporary_states[i] = new_state();
@@ -702,8 +709,6 @@ void add_words(char* filename)
     char line[MAXIMUM_LINE_SIZE]; const char s[2] = " ";
     char* token; char* first; char* second;
 
-    int path_length;
-    int path_states[MAXIMUM_WORD_SIZE];
     int position;
     while (fgets(line, sizeof line, file) != NULL)
     {
@@ -713,8 +718,9 @@ void add_words(char* filename)
         token = strtok(NULL, s);
         second = token;
             
-    extend(first, path_states, &path_length, &position);
+        extend(first, temporary_states, &prefix_states_length, &position);
         add_word(first, second);
+        reduce(first, position);
     }
 
     fclose(file);
@@ -736,6 +742,7 @@ void delete_words(char* filename)
     {
         line[strlen(line) - 1] = '\0';
         delete_word(line);
+        printf("DELETED %s\n", line);
     }
 
     fclose(file);
@@ -786,7 +793,6 @@ void create_minimal_transducer_for_sorted_list(char* filename)
 
     while (fgets(line, sizeof line, file) != NULL)
     {
-        
         line[strlen(line) - 1] = '\0';
         token = strtok(line, s);
         current_word = token;
@@ -818,23 +824,23 @@ void dispatch(int argc, char* argv[])
         initialize_hash();
 
         int i;
-        for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+        for (i = 0; i < MAXIMUM_WORD_SIZE; ++i)
         {
             output_labels[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
             output_labels_new_values[i] = malloc(MAXIMUM_WORD_SIZE * sizeof(char));
         }
 
         create_minimal_transducer_for_sorted_list(argv[1]);
-        if (argc >= 4 && strcmp(argv[2], "--d"))
+        if (argc >= 4 && strcmp(argv[2], "--d") == 0)
             delete_words(argv[3]);
-        else if (argc >= 6 && strcmp(argv[4], "--d"))
+        else if (argc >= 6 && strcmp(argv[4], "--d") == 0)
             delete_words(argv[5]);
-        if (argc >= 4 && strcmp(argv[2], "--a"))
+        if (argc >= 4 && strcmp(argv[2], "--a") == 0)
             add_words(argv[3]);
-        else if (argc >= 6 && strcmp(argv[4], "--a"))
+        else if (argc >= 6 && strcmp(argv[4], "--a") == 0)
             add_words(argv[5]);
 
-        for(i = 0; i < MAXIMUM_WORD_SIZE; ++i)
+        for (i = 0; i < MAXIMUM_WORD_SIZE; ++i)
         {
             free(output_labels[i]);
             free(output_labels_new_values[i]);
@@ -842,5 +848,4 @@ void dispatch(int argc, char* argv[])
         free_hash();
         free_memory();
     }
-
 }
