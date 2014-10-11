@@ -129,7 +129,7 @@ int search(int value, int key)
 {
     int j = table[key];
 
-    while (j!= -1)
+    while (j != -1)
     {
         if (j != value && equivalent(value, j))
             return j;
