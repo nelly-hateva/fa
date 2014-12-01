@@ -15,8 +15,12 @@
 #define LAST_CHAR 126 // ~ OR 122 z
 #define ALPHABET_SIZE 94 // OR 26
 
+extern int hash_size;
+
 int* free_states_numbers;
 int* free_transitions_numbers;
+int memory_for_free_states;
+int memory_for_free_transitions;
 int free_state;
 int free_transition;
 
@@ -89,6 +93,8 @@ void allocate_memory()
 
     memory_for_states = INITIAL_STATES_NUMBER;
     memory_for_transitions = INITIAL_TRANSITIONS_NUMBER;
+    memory_for_free_states =  FREE_NUMBERS_SIZE;
+    memory_for_free_transitions = FREE_NUMBERS_SIZE;
 
     first_transition = (int*) malloc(memory_for_states * sizeof(int));
     final = (char*) malloc(memory_for_states * sizeof(char));
@@ -100,8 +106,8 @@ void allocate_memory()
     final_state_output = (char**) malloc(memory_for_transitions * sizeof(char*));
     output_transition = (char**) malloc(memory_for_transitions * sizeof(char*));
 
-    free_states_numbers = (int*) malloc(FREE_NUMBERS_SIZE * sizeof(int));
-    free_transitions_numbers = (int*) malloc(FREE_NUMBERS_SIZE * sizeof(int));
+    free_states_numbers = (int*) malloc(memory_for_free_states * sizeof(int));
+    free_transitions_numbers = (int*) malloc(memory_for_free_transitions * sizeof(int));
 
     int i;
     for (i = 0; i < memory_for_transitions; ++i)
@@ -156,6 +162,19 @@ void reallocate_memory_for_transitions()
 }
 
 
+void reallocate_memory_for_free_positions()
+{
+    if (free_state >= memory_for_free_states)
+    {
+        memory_for_free_states *= 2;
+        free_states_numbers = (int*) realloc(free_states_numbers, memory_for_free_states * sizeof(int));
+    }
+    else if (free_transition >= memory_for_free_transitions)
+    {
+        memory_for_free_transitions *= 2;
+        free_transitions_numbers = (int*) realloc(free_transitions_numbers, memory_for_free_transitions * sizeof(int));
+    }
+}
 // AUTOMATON OPERATIONS
 
 int new_state()
@@ -202,6 +221,7 @@ void set_transition(int from_state, char character, int to_state)
 }
 
 
+
 void set_output(int state, char character, char* string)
 {
     int transition = first_transition[state];
@@ -225,6 +245,7 @@ void remove_transition(int transition)
     next_transition[transition] = -1;
 
     ++free_transition;
+    reallocate_memory_for_free_positions();
     free_transitions_numbers[free_transition] = transition;
     --number_of_transitions;
 }
@@ -271,11 +292,11 @@ void delete_state(int state)
         remove_transition(transition);
         transition = next;
     }
-
     first_transition[state] = -1;
     final[state] = -1;
 
     ++free_state;
+    reallocate_memory_for_free_positions();
     free_states_numbers[free_state] = state;
     --number_of_states;
 }
@@ -440,9 +461,9 @@ void clone(char* word, int* path_states, int* path_length, int i)
     {
         char* output_label;
         int copy_state = new_state();
+        add_state(copy_state);
         int previous_state = path_states[i - 1];
         int current_state = path_states[i];
-
         final[copy_state] = final[current_state];
         if (final[current_state] == 1)
             final_state_output[copy_state] = strdup(final_state_output[current_state]);
@@ -471,11 +492,12 @@ void extend(char* word, int* path_states, int* path_length, int* position)
     path(word, path_states, path_length);
     int i, j = 1; int minimum = -1;
     int incoming_transitions_count, current_state;
+
     while (j < *path_length && minimum == -1)
     {
         current_state = path_states[j];
         incoming_transitions_count = 0;
-        for (i = 0; i < number_of_transitions; ++i)
+        for (i = 0; i < memory_for_transitions; ++i)
         {
             if (to[i] == current_state)
                 ++incoming_transitions_count;
@@ -487,58 +509,13 @@ void extend(char* word, int* path_states, int* path_length, int* position)
         }
         ++j;
     }
-    *position = minimum;
+    *position = minimum - 1;
     if (minimum != -1)
     {
         delete(path_states[minimum - 1], hash_code(path_states[minimum - 1]));
         return clone(word, path_states, path_length, minimum);
     }
-    return;
-}
-
-
-void delete_word(char* word)
-{
-    int position;
-    extend(word, temporary_states, &prefix_states_length, &position);
-
-    int last_deleted = -1;
-    if (final[temporary_states[prefix_states_length - 1]] == 1 && prefix_states_length == strlen(word) + 1)
-    {
-        final[temporary_states[prefix_states_length - 1]] = 0;
-        int j, outgoing_transitions, transition;
-        for (j = prefix_states_length - 1; j > 0; --j)
-        {
-            printf("del %s %d %d\n", word,j,temporary_states[j] );
-            outgoing_transitions = 0;
-            transition = first_transition[temporary_states[j]];
-            while (transition != -1)
-            {
-                transition = next_transition[transition];
-                ++outgoing_transitions;
-                if ((j == prefix_states_length - 1 && outgoing_transitions > 0) || (j != prefix_states_length - 1 && outgoing_transitions > 2))
-                    break;
-            }
-            printf("del %s %d %d\n", word,j,temporary_states[j] );
-            if (j == prefix_states_length - 1 && outgoing_transitions > 0)
-                break;
-            else if (j == prefix_states_length - 1 && outgoing_transitions == 0)
-            {
-                delete_state(temporary_states[j]);
-                last_deleted = j;
-            }
-            else if (outgoing_transitions <= 1 && j != prefix_states_length - 1)
-            {
-                delete_state(temporary_states[j]);
-                last_deleted = j;
-            }
-            else
-                break;
-        }
-        if (last_deleted != -1)
-            delete_transition(temporary_states[last_deleted - 1], word[last_deleted - 1]);
-        reduce(word, position);
-    }
+    *position = *path_length;
 }
 
 
@@ -594,9 +571,143 @@ void print_transducer(char* filename, char suffix_filename)
     }
     depth_first_search(start, "", "", file);
     fclose(file);
+    free(result_filename);
 
     printf("%c NUMBER OF STATES %d\n", suffix_filename, number_of_states);
+    printf("%c HASH SIZE %d\n", suffix_filename, hash_size);
     printf("%c NUMBER OF TRANSITIONS %d\n", suffix_filename, number_of_transitions);
+}
+
+
+void delete_word(char* word)
+{
+    int position;
+    int path_states[MAXIMUM_WORD_SIZE];
+    int path_states_length;
+    extend(word, path_states, &path_states_length, &position);
+
+    int last_deleted = -1;
+    if (final[path_states[path_states_length - 1]] == 1 && path_states_length == strlen(word) + 1)
+    {
+        int j;
+        for (j = 0; j < position; ++j)
+            delete(path_states[j], hash_code(path_states[j]));
+        final[path_states[path_states_length - 1]] = 0;
+        int outgoing_transitions, transitionn;
+        for (j = path_states_length - 1; j > 0; --j)
+        {
+            if (final[path_states[j]] != 1)
+            {
+                outgoing_transitions = 0;
+                transitionn = first_transition[path_states[j]];
+                while (transitionn != -1)
+                {
+                    transitionn = next_transition[transitionn];
+                    ++outgoing_transitions;
+                    if ((j == path_states_length - 1 && outgoing_transitions > 0) || (j != path_states_length - 1 && outgoing_transitions > 1))
+                        break;
+                }
+                if (j == path_states_length - 1 && outgoing_transitions == 0)
+                {
+                    delete_state(path_states[j]);
+                    last_deleted = j;
+                }
+                else if (outgoing_transitions <= 1 && j != path_states_length - 1)
+                {
+                    delete_state(path_states[j]);
+                    last_deleted = j;
+                }
+                else
+                    break;
+            }
+            else
+                break;
+        } 
+        if (last_deleted != -1)
+            delete_transition(path_states[last_deleted - 1], word[last_deleted - 1]);
+
+        int state;
+        int transition;
+        int index = 0;
+        int t,s;
+        int longest=-1;
+        char* array[ALPHABET_SIZE] = {NULL};
+        int flag;
+        int l;
+        char prefix[MAXIMUM_WORD_SIZE];
+        int pos=0;
+        int bulshit = last_deleted - 1;
+        char lcp[MAXIMUM_WORD_SIZE];
+
+        if(last_deleted == -1)
+            bulshit = path_states_length - 1;
+        for (l = bulshit; l > 0; --l)
+        {
+            index = 0;
+            state = path_states[l];
+            transition = first_transition[state];
+            while (transition != -1)
+            {
+                array[index] = strdup(output_transition_label(state, label[transition]));
+                if (longest == -1)
+                    longest = strlen(array[index]);
+                else if (strlen(array[index]) > longest)
+                    longest = strlen(array[index]);
+                ++index;
+                transition = next_transition[transition];
+            }
+
+            pos = 0;
+            for (t = 0; t < longest; ++t)
+            {
+                flag = 1;
+                for (s = 0; s < index - 1; ++s)
+                    if (array[s][t] != array[s + 1][t])
+                    {
+                        flag = 0;
+                        break;
+                    }
+                if (flag == 1)
+                {
+                    prefix[pos] = array[0][t];
+                    ++pos;
+                }
+                else
+                    break;
+            }
+            prefix[pos] = '\0';
+
+            if(final[state] == 1)
+            {
+                longest_common_prefix(final_state_output[state], prefix, lcp);
+                if (strlen(lcp) > 0)
+                {
+                    string_remainder(prefix, final_state_output[state], rest);
+                    final_state_output[state] = strdup(rest);
+                }
+                else if (first_transition[state] == -1)
+                {
+                    set_output(path_states[l-1], word[l-1], final_state_output[state]);
+                    final_state_output[state] = "";
+                    continue;
+                }
+                else
+                    break;
+            }
+            transition = first_transition[state];
+            while (transition != -1)
+            {
+                string_remainder(prefix, output_transition_label(state, label[transition]), rest);
+                set_output(state, label[transition], rest);
+                transition = next_transition[transition];
+            }
+            char label_output[MAXIMUM_WORD_SIZE];
+            strcpy(label_output, output_transition_label(path_states[l - 1], word[l - 1]));
+            strcat(label_output, prefix);
+            set_output(path_states[l - 1], word[l - 1], label_output);
+        }
+        reduce(word, 0);
+    }
 }
 
 
@@ -742,7 +853,6 @@ void delete_words(char* filename)
     {
         line[strlen(line) - 1] = '\0';
         delete_word(line);
-        printf("DELETED %s\n", line);
     }
 
     fclose(file);
